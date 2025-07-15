@@ -2,15 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Pakhiiiiiiiiiiiii 🐦</title>
+  <title>DU-LINK | Pakhiiiiiiiiiiiii 🐦</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <link rel="manifest" href="/manifest.json" />
   <style>
     * {
       box-sizing: border-box;
     }
-    body {
+    html, body {
       margin: 0;
+      padding: 0;
       font-family: 'Segoe UI', sans-serif;
       background: #f1f5f9;
       display: flex;
@@ -29,6 +30,7 @@
 
     #chatBox {
       flex: 1;
+      min-height: 0;
       padding: 10px;
       overflow-y: auto;
       display: flex;
@@ -193,7 +195,7 @@
     </form>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
   <script src="/script.js"></script>
   <script src="/notify.js"></script>
 </body>
