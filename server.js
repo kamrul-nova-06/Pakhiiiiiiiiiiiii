@@ -1,66 +1,43 @@
 const express = require('express');
-const path = require('path');
-const http = require('http');
-const socketIO = require('socket.io');
-
 const app = express();
-const server = http.createServer(app);
-const io = socketIO(server);
+const http = require('http').createServer(app);
+const io = require('socket.io')(http);
+const path = require('path');
+
+const PORT = process.env.PORT || 3000;
+let users = {};
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-let users = {}; // socket.id => { name, number }
+io.on('connection', (socket) => {
+  let userName = '';
 
-io.on('connection', socket => {
-  socket.on('login', user => {
-    users[socket.id] = user;
-    io.emit('active-users', Object.values(users));
+  socket.on('join', (name) => {
+    userName = name;
+    users[socket.id] = name;
+    io.emit('userList', Object.values(users));
   });
 
-  socket.on('chat message', ({ to, message }) => {
-    if (to === 'group') {
-      io.emit('group message', {
-        user: users[socket.id],
-        message,
-      });
+  socket.on('message', (data) => {
+    if (data.to === 'group') {
+      io.emit('message', data);
     } else {
-      for (let sid in users) {
-        if (users[sid].number === to || sid === socket.id) {
-          io.to(sid).emit('private message', {
-            from: users[socket.id],
-            to,
-            message,
-          });
-        }
-      }
-    }
-  });
-
-  socket.on('image', ({ to, image }) => {
-    if (to === 'group') {
-      io.emit('group image', {
-        user: users[socket.id],
-        image,
-      });
-    } else {
-      for (let sid in users) {
-        if (users[sid].number === to || sid === socket.id) {
-          io.to(sid).emit('private image', {
-            from: users[socket.id],
-            image,
-          });
-        }
+      const targetSocketId = Object.keys(users).find(
+        key => users[key] === data.to
+      );
+      if (targetSocketId) {
+        io.to(targetSocketId).emit('message', data);
+        socket.emit('message', data); // for sender
       }
     }
   });
 
   socket.on('disconnect', () => {
     delete users[socket.id];
-    io.emit('active-users', Object.values(users));
+    io.emit('userList', Object.values(users));
   });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+http.listen(PORT, () => {
+  console.log(`🐦 Pakhiiiiiiiiiiiii Server running on http://localhost:${PORT}`);
 });
