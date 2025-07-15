@@ -1,19 +1,23 @@
-function notifyUser(message) {
-  if (!("Notification" in window)) return;
+// Notification permission request
+if ('Notification' in window && Notification.permission !== 'granted') {
+  Notification.requestPermission().then(function(permission) {
+    console.log("Notification permission:", permission);
+  });
+}
 
-  if (Notification.permission === "granted") {
-    new Notification("Pakhiiiiiiiiiiiii 🐦", {
-      body: message,
-      icon: "https://cdn-icons-png.flaticon.com/512/616/616408.png"
+// Notification sound function
+function playNotification() {
+  const audio = new Audio('/notify.mp3'); // তুমি চাইলে এখানে base64 sound ব্যবহার করতে পারো
+  audio.play();
+}
+
+// Show notification (only when user is not on page)
+function showNotification(title, body) {
+  if (document.hidden && Notification.permission === 'granted') {
+    new Notification(title, {
+      body: body,
+      icon: '/chat-icon.png' // তোমার PNG ফাইলের নাম এখানে
     });
-  } else if (Notification.permission !== "denied") {
-    Notification.requestPermission().then(permission => {
-      if (permission === "granted") {
-        new Notification("Pakhiiiiiiiiiiiii 🐦", {
-          body: message,
-          icon: "https://cdn-icons-png.flaticon.com/512/616/616408.png"
-        });
-      }
-    });
+    playNotification();
   }
 }
