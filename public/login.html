@@ -1,27 +1,67 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
-<title>Login — Pakhiiiiiiiiiiiii</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <title>Login - Pakhiiiiiiiiiiiii</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(to bottom, #e0f7fa, #ffffff);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .login-box {
+      background: white;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      width: 90%;
+      max-width: 350px;
+      text-align: center;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      padding: 12px;
+      width: 100%;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    h2 {
+      margin-bottom: 20px;
+    }
+  </style>
 </head>
 <body>
-<div class="login-box">
-  <h2>Login</h2>
-  <input id="name" placeholder="Your Name">
-  <input id="number" placeholder="Phone Number">
-  <button onclick="login()">Enter Chat</button>
-</div>
+  <div class="login-box">
+    <h2>Welcome to 🕊️ Pakhiiiiiiiiiiiii</h2>
+    <input type="text" id="name" placeholder="Enter your name" required>
+    <input type="password" id="pass" placeholder="Enter password" required>
+    <button onclick="login()">Login</button>
+  </div>
 
-<script>
-function login() {
-  let name = document.getElementById('name').value.trim();
-  let number = document.getElementById('number').value.trim();
-  if(!name||!number){return alert('Fill both fields');}
-  localStorage.setItem('pakhiiUser', JSON.stringify({name,number}));
-  window.location.href = 'index.html';
-}
-</script>
+  <script>
+    function login() {
+      const name = document.getElementById('name').value.trim();
+      const pass = document.getElementById('pass').value.trim();
+      if (!name || !pass) return alert("Fill all fields!");
+      if (pass !== 'uss') return alert("Incorrect password!");
+      localStorage.setItem('pakhiiUser', JSON.stringify({ name }));
+      window.location.href = 'index.html';
+    }
+  </script>
 </body>
 </html>
