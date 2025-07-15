@@ -1,211 +1,150 @@
 const socket = io();
-let currentUser = null;
-let currentChat = 'group'; // default group chat
-let typing = false;
-let typingTimeout;
-
-// Login info
-fetch('/user-info')
-  .then(res => res.json())
-  .then(data => {
-    currentUser = data;
-    document.getElementById('chatHeader').innerText = 'Group Chat';
-  });
+let currentChat = 'group';
+let myName = getCookie('name') || 'Unknown';
 
 const chatBox = document.getElementById('chatBox');
-const chatForm = document.getElementById('chatForm');
 const messageInput = document.getElementById('messageInput');
-const imageInput = document.getElementById('imageInput');
+const chatForm = document.getElementById('chatForm');
 const userList = document.getElementById('userList');
+const chatHeader = document.getElementById('chatHeader');
+const imageInput = document.getElementById('imageInput');
 
-chatForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const msg = messageInput.value.trim();
-  const file = imageInput.files[0];
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp(name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[1]) : null;
+}
 
-  if (msg || file) {
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = function () {
-        socket.emit('chat message', {
-          from: currentUser.name,
-          to: currentChat,
-          text: msg,
-          image: reader.result,
-        });
-      };
-      reader.readAsDataURL(file);
-    } else {
-      socket.emit('chat message', {
-        from: currentUser.name,
-        to: currentChat,
-        text: msg,
-      });
-    }
-    messageInput.value = '';
-    imageInput.value = '';
-  }
-});
+function scrollToBottom() {
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
 
-socket.on('chat message', (data) => {
-  const messageDiv = document.createElement('div');
-  messageDiv.className = 'message';
-  if (data.from === currentUser.name) {
-    messageDiv.classList.add('my-message');
-  } else {
-    messageDiv.classList.add('other-message');
+function showMessage({ name, message, image, isOwn }) {
+  const msgDiv = document.createElement('div');
+  msgDiv.classList.add('message');
+  msgDiv.classList.add(isOwn ? 'my-message' : 'other-message');
+
+  if (!isOwn) {
+    const nameTag = document.createElement('div');
+    nameTag.className = 'name';
+    nameTag.innerText = name;
+    msgDiv.appendChild(nameTag);
   }
 
-  const nameDiv = document.createElement('div');
-  nameDiv.className = 'name';
-  nameDiv.innerText = data.from;
+  if (message) msgDiv.appendChild(document.createTextNode(message));
 
-  messageDiv.appendChild(nameDiv);
-
-  if (data.image) {
+  if (image) {
     const img = document.createElement('img');
-    img.src = data.image;
-    img.style.maxWidth = '100%';
+    img.src = image;
+    img.style.maxWidth = '200px';
     img.style.borderRadius = '8px';
     img.style.marginTop = '5px';
-    messageDiv.appendChild(img);
+    msgDiv.appendChild(img);
   }
 
-  if (data.text) {
-    const text = document.createElement('div');
-    text.innerText = data.text;
-    messageDiv.appendChild(text);
-  }
-
-  if (data.to === currentChat || data.to === currentUser.name || data.from === currentUser.name) {
-    chatBox.appendChild(messageDiv);
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-    if (data.from !== currentUser.name) {
-      playNotification();
-      flashTitle(`${data.from} sent a message`);
-    }
-  }
-});
+  chatBox.appendChild(msgDiv);
+  scrollToBottom();
+}
 
 function openGroupChat() {
   currentChat = 'group';
-  document.getElementById('chatHeader').innerText = 'Group Chat';
+  chatHeader.innerText = 'Group Chat';
   chatBox.innerHTML = '';
-  socket.emit('load chat', { to: 'group' });
 }
 
-function openPrivateChat(user) {
-  currentChat = user;
-  document.getElementById('chatHeader').innerText = `Chat with ${user}`;
-  chatBox.innerHTML = '';
-  socket.emit('load chat', { to: user });
-}
-
-socket.on('chat history', (messages) => {
-  chatBox.innerHTML = '';
-  messages.forEach((data) => {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = 'message';
-    messageDiv.classList.add(data.from === currentUser.name ? 'my-message' : 'other-message');
-
-    const nameDiv = document.createElement('div');
-    nameDiv.className = 'name';
-    nameDiv.innerText = data.from;
-
-    messageDiv.appendChild(nameDiv);
-
-    if (data.image) {
-      const img = document.createElement('img');
-      img.src = data.image;
-      img.style.maxWidth = '100%';
-      img.style.borderRadius = '8px';
-      img.style.marginTop = '5px';
-      messageDiv.appendChild(img);
-    }
-
-    if (data.text) {
-      const text = document.createElement('div');
-      text.innerText = data.text;
-      messageDiv.appendChild(text);
-    }
-
-    chatBox.appendChild(messageDiv);
-  });
-  chatBox.scrollTop = chatBox.scrollHeight;
-});
-
-messageInput.addEventListener('input', () => {
-  if (!typing) {
-    typing = true;
-    socket.emit('typing', { from: currentUser.name, to: currentChat });
-    typingTimeout = setTimeout(stopTyping, 2000);
-  } else {
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(stopTyping, 2000);
+socket.on('groupMessage', ({ name, message, image }) => {
+  const isOwn = name === myName;
+  if (currentChat === 'group') {
+    showMessage({ name, message, image, isOwn });
+    if (!isOwn) playNotification();
   }
 });
 
-function stopTyping() {
-  typing = false;
-  socket.emit('stop typing', { from: currentUser.name, to: currentChat });
-}
-
-socket.on('typing', (user) => {
-  document.getElementById('chatHeader').innerText = `${user} is typing...`;
+socket.on('privateMessage', ({ from, message, image }) => {
+  const isOwn = from === myName;
+  if (currentChat === from || isOwn) {
+    showMessage({ name: from, message, image, isOwn });
+    if (!isOwn) playNotification();
+  }
 });
 
-socket.on('stop typing', () => {
-  document.getElementById('chatHeader').innerText = currentChat === 'group'
-    ? 'Group Chat'
-    : `Chat with ${currentChat}`;
-});
-
-function playNotification() {
-  const audio = new Audio('/notify.mp3');
-  audio.play().catch(() => {});
-}
-
-let defaultTitle = document.title;
-function flashTitle(msg) {
-  let flashing = true;
-  let i = 0;
-  const interval = setInterval(() => {
-    document.title = i % 2 === 0 ? msg : defaultTitle;
-    i++;
-    if (!flashing) {
-      clearInterval(interval);
-      document.title = defaultTitle;
-    }
-  }, 1000);
-
-  setTimeout(() => {
-    flashing = false;
-  }, 6000);
-}
-
-socket.on('user list', (users) => {
+socket.on('updateUsers', (users) => {
   userList.innerHTML = '';
   users.forEach(user => {
     const userDiv = document.createElement('div');
     userDiv.className = 'user';
-    userDiv.onclick = () => openPrivateChat(user.name);
+    userDiv.onclick = () => {
+      currentChat = user;
+      chatHeader.innerText = `Chat with ${user}`;
+      chatBox.innerHTML = '';
+    };
 
     const avatar = document.createElement('div');
     avatar.className = 'avatar';
-    avatar.innerText = user.name.charAt(0).toUpperCase();
+    avatar.innerText = user[0]?.toUpperCase();
 
-    if (user.active) {
-      avatar.style.border = '2px solid red';
-    }
-
-    const label = document.createElement('div');
-    label.innerText = user.name;
-    label.style.fontSize = '12px';
+    if (user !== myName) avatar.style.boxShadow = '0 0 0 3px red';
 
     userDiv.appendChild(avatar);
+    const label = document.createElement('div');
+    label.innerText = user;
+    label.style.fontSize = '12px';
+    label.style.marginTop = '4px';
     userDiv.appendChild(label);
 
     userList.appendChild(userDiv);
   });
 });
+
+chatForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = messageInput.value.trim();
+  const file = imageInput.files[0];
+
+  if (!msg && !file) return;
+
+  let imageUrl = null;
+
+  if (file) {
+    const formData = new FormData();
+    formData.append('image', file);
+    const res = await fetch('/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+    imageUrl = data.image;
+    imageInput.value = '';
+  }
+
+  if (currentChat === 'group') {
+    socket.emit('groupMessage', { message: msg, image: imageUrl });
+  } else {
+    socket.emit('privateMessage', {
+      to: currentChat,
+      message: msg,
+      image: imageUrl,
+    });
+  }
+
+  if (msg || imageUrl) {
+    showMessage({ name: myName, message: msg, image: imageUrl, isOwn: true });
+    messageInput.value = '';
+  }
+});
+
+messageInput.addEventListener('input', () => {
+  socket.emit('typing', currentChat);
+});
+
+socket.on('typing', ({ from, target }) => {
+  if (from !== myName && currentChat === target) {
+    chatHeader.innerText = `${from} typing...`;
+    setTimeout(() => {
+      chatHeader.innerText = currentChat === 'group' ? 'Group Chat' : `Chat with ${currentChat}`;
+    }, 2000);
+  }
+});
+
+function playNotification() {
+  if (document.hidden) {
+    const audio = new Audio('/notify.mp3');
+    audio.play().catch(() => {});
+  }
+}
