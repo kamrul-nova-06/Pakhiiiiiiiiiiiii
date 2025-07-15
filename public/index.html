@@ -21,6 +21,16 @@
       align-items: center;
       justify-content: space-between;
     }
+    .imgBtn {
+  font-size: 20px;
+  margin-right: 10px;
+  cursor: pointer;
+}
+.message img {
+  max-width: 200px;
+  margin-top: 5px;
+  border-radius: 8px;
+    }
 
     header h1 {
       font-size: 18px;
@@ -136,13 +146,19 @@
     <div id="userBar"></div>
     <div id="messages"></div>
     <div id="chatInput">
-      <input id="msg" type="text" placeholder="Type your message..." autocomplete="off" />
+<form id="chatForm" onsubmit="return false">
+  <input type="file" id="imgInput" accept="image/*" hidden />
+  <label for="imgInput" class="imgBtn">📷</label>
+  <input type="text" id="msg" placeholder="Type your message..." />
+</form>
       <button onclick="sendMessage()">Send</button>
     </div>
   </div>
 
   <footer>
+
     Pakhiiiiiiiiiiiii - Chat with ❤️
+    
   </footer>
 
   <script src="/socket.io/socket.io.js"></script>
