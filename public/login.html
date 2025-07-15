@@ -1,13 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DU-LINK | Login</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pakhiiiiiiiiiiiii 🐦 Login</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
     body {
-      font-family: sans-serif;
-      background: #f0f4ff;
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f1f5f9;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -17,56 +20,67 @@
       background: white;
       padding: 30px;
       border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
       width: 90%;
-      max-width: 350px;
+      max-width: 400px;
     }
-    .login-box h2 {
+    h2 {
       text-align: center;
       margin-bottom: 20px;
-      color: #1e3a8a;
+      color: #1e40af;
     }
-    .login-box input {
+    input {
       width: 100%;
-      padding: 12px;
-      margin: 10px 0;
+      padding: 10px;
+      margin-bottom: 15px;
       border: 1px solid #ccc;
       border-radius: 8px;
       font-size: 16px;
     }
-    .login-box button {
+    button {
       width: 100%;
       padding: 12px;
-      background-color: #1e3a8a;
+      background: #1e40af;
       color: white;
       font-size: 16px;
       border: none;
       border-radius: 8px;
       cursor: pointer;
     }
-    .login-box button:hover {
-      background-color: #1d2e72;
+    .error {
+      color: red;
+      text-align: center;
+      font-size: 14px;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
   <div class="login-box">
-    <h2>Pakhiiiiiiiiiiiii Login</h2>
-    <input type="text" id="nameInput" placeholder="Your Name" required>
-    <input type="password" id="passInput" placeholder="Enter Password" required>
+    <h2>Welcome to <strong>Pakhiiiiiiiiiiiii 🐦</strong></h2>
+    <input type="text" id="name" placeholder="Enter Your Name" />
+    <input type="password" id="password" placeholder="Enter Password" />
     <button onclick="login()">Login</button>
-  </div>
-
-  <script>
+    <div class="error" id="error"></div>
+  </div>  <script>
     function login() {
-      const name = document.getElementById("nameInput").value.trim();
-      const pass = document.getElementById("passInput").value.trim();
-      if (!name || !pass) return alert("Please fill in all fields!");
-      if (pass !== "uss") return alert("Wrong password!");
+      const name = document.getElementById('name').value.trim();
+      const password = document.getElementById('password').value;
+      const error = document.getElementById('error');
 
-      localStorage.setItem("pakhiiUser", JSON.stringify({ name }));
-      window.location.href = "/index.html";
+      if (!name || !password) {
+        error.textContent = 'Please fill in both fields.';
+        return;
+      }
+
+      if (password !== 'uss') {
+        error.textContent = 'Wrong password!';
+        return;
+      }
+
+      // Save name in cookie
+      document.cookie = `chat_user=${name}; path=/; max-age=31536000`;
+      window.location.href = '/';
     }
-  </script>
-</body>
+  </script></body>
 </html>
