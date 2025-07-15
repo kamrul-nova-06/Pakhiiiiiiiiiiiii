@@ -1,116 +1,162 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Pakhiiiiiiiiiiiii 🐦 Login</title>
-<style>
-  body, html {
-    height: 100%; margin:0; font-family: Arial, sans-serif;
-    display: flex; justify-content: center; align-items: center;
-    background: #0084ff;
-  }
-  #loginBox {
-    background: white;
-    padding: 30px 25px;
-    border-radius: 10px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.3);
-    width: 320px;
-  }
-  #loginBox h2 {
-    margin-bottom: 20px;
-    color: #0084ff;
-    text-align: center;
-  }
-  #loginBox input {
-    width: 100%; padding: 12px 10px; margin-bottom: 15px;
-    font-size: 1rem;
-    border: 1.5px solid #ddd;
-    border-radius: 6px;
-    outline: none;
-    transition: border-color 0.3s;
-  }
-  #loginBox input:focus {
-    border-color: #0084ff;
-  }
-  #loginBtn {
-    width: 100%;
-    padding: 12px;
-    background: #0084ff;
-    border: none;
-    color: white;
-    font-size: 1.1rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 700;
-    transition: background-color 0.3s;
-  }
-  #loginBtn:hover {
-    background: #006dcc;
-  }
-  #errorMsg {
-    color: red;
-    font-size: 0.9rem;
-    min-height: 20px;
-    text-align: center;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <title>Pakhiiiiiiiiiiiii 🐦</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      height: 100vh;
+    }
+
+    header {
+      background: #0084ff;
+      color: white;
+      padding: 10px 15px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    header h1 {
+      font-size: 18px;
+      margin: 0;
+    }
+
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 100px);
+    }
+
+    #userBar {
+      background: white;
+      padding: 10px;
+      overflow-x: auto;
+      display: flex;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .user {
+      margin-right: 10px;
+      text-align: center;
+      position: relative;
+    }
+
+    .user .dot {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 8px;
+      height: 8px;
+      background: red;
+      border-radius: 50%;
+    }
+
+    #messages {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+    }
+
+    .message {
+      max-width: 70%;
+      margin: 5px 0;
+      padding: 10px;
+      border-radius: 10px;
+      clear: both;
+    }
+
+    .self {
+      background: #dcf8c6;
+      float: right;
+    }
+
+    .other {
+      background: white;
+      float: left;
+    }
+
+    #chatInput {
+      display: flex;
+      padding: 10px;
+      background: white;
+      border-top: 1px solid #ccc;
+    }
+
+    #chatInput input {
+      flex: 1;
+      padding: 10px;
+      border-radius: 20px;
+      border: 1px solid #ccc;
+    }
+
+    #chatInput button {
+      margin-left: 10px;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 20px;
+      background: #0084ff;
+      color: white;
+      cursor: pointer;
+    }
+
+    footer {
+      height: 40px;
+      background: #eee;
+      text-align: center;
+      padding: 8px;
+      font-size: 14px;
+    }
+
+    select {
+      margin-left: 10px;
+      padding: 5px;
+      border-radius: 5px;
+    }
+
+  </style>
 </head>
 <body>
+  <header>
+    <h1>Pakhiiiiiiiiiiiii 🐦</h1>
+    <div>
+      <span id="userName"></span>
+      <select id="modeSelect">
+        <option value="group">Group</option>
+      </select>
+    </div>
+  </header>
 
-<div id="loginBox">
-  <h2>Login to Pakhiiiiiiiiiiiii 🐦</h2>
-  <input type="text" id="nameInput" placeholder="Enter your name" autocomplete="off" />
-  <input type="password" id="passInput" placeholder="Password" autocomplete="off" />
-  <button id="loginBtn">Login</button>
-  <div id="errorMsg"></div>
-</div>
+  <div class="chat-container">
+    <div id="userBar"></div>
+    <div id="messages"></div>
+    <div id="chatInput">
+      <input id="msg" type="text" placeholder="Type your message..." autocomplete="off" />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
 
-<script>
-  const loginBtn = document.getElementById('loginBtn');
-  const nameInput = document.getElementById('nameInput');
-  const passInput = document.getElementById('passInput');
-  const errorMsg = document.getElementById('errorMsg');
+  <footer>
+    Pakhiiiiiiiiiiiii - Chat with ❤️
+  </footer>
 
-  loginBtn.addEventListener('click', async () => {
-    const name = nameInput.value.trim();
-    const pass = passInput.value;
-
-    if (!name) {
-      errorMsg.textContent = 'Please enter your name';
-      return;
-    }
-    if (!pass) {
-      errorMsg.textContent = 'Please enter password';
-      return;
-    }
-    errorMsg.textContent = '';
-
-    try {
-      const res = await fetch('/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, pass })
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/notify.js"></script>
+  <script src="/script.js"></script>
+  <script>
+    fetch('/user-info')
+      .then(res => res.json())
+      .then(data => {
+        const name = data.name;
+        document.getElementById('userName').textContent = `👤 ${name}`;
+        window.userName = name;
+        socket.emit('register', name);
       });
-      const data = await res.json();
-      if (data.success) {
-        // Redirect to chat page (or reload to load chat UI)
-        window.location.href = '/';
-      } else {
-        errorMsg.textContent = 'Invalid password!';
-      }
-    } catch (e) {
-      errorMsg.textContent = 'Error connecting to server';
-    }
-  });
-
-  // Optional: Press Enter key to login
-  [nameInput, passInput].forEach(input =>
-    input.addEventListener('keypress', e => {
-      if (e.key === 'Enter') loginBtn.click();
-    })
-  );
-</script>
-
+  </script>
 </body>
 </html>
