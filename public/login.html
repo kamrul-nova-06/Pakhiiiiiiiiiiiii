@@ -1,66 +1,71 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Login - Pakhiiiiiiiiiiiii</title>
+  <meta charset="UTF-8">
+  <title>DU-LINK | Login</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
-      font-family: 'Poppins', sans-serif;
-      background: linear-gradient(to bottom, #e0f7fa, #ffffff);
+      font-family: sans-serif;
+      background: #f0f4ff;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
-      margin: 0;
     }
     .login-box {
       background: white;
-      padding: 25px;
-      border-radius: 15px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
       width: 90%;
       max-width: 350px;
-      text-align: center;
     }
-    input {
+    .login-box h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #1e3a8a;
+    }
+    .login-box input {
       width: 100%;
       padding: 12px;
       margin: 10px 0;
-      border: 1px solid #ddd;
+      border: 1px solid #ccc;
       border-radius: 8px;
       font-size: 16px;
     }
-    button {
-      background-color: #007bff;
-      color: white;
-      padding: 12px;
+    .login-box button {
       width: 100%;
+      padding: 12px;
+      background-color: #1e3a8a;
+      color: white;
+      font-size: 16px;
       border: none;
       border-radius: 8px;
-      font-size: 16px;
+      cursor: pointer;
     }
-    h2 {
-      margin-bottom: 20px;
+    .login-box button:hover {
+      background-color: #1d2e72;
     }
   </style>
 </head>
 <body>
   <div class="login-box">
-    <h2>Welcome to 🕊️ Pakhiiiiiiiiiiiii</h2>
-    <input type="text" id="name" placeholder="Enter your name" required>
-    <input type="password" id="pass" placeholder="Enter password" required>
+    <h2>Pakhiiiiiiiiiiiii Login</h2>
+    <input type="text" id="nameInput" placeholder="Your Name" required>
+    <input type="password" id="passInput" placeholder="Enter Password" required>
     <button onclick="login()">Login</button>
   </div>
 
   <script>
     function login() {
-      const name = document.getElementById('name').value.trim();
-      const pass = document.getElementById('pass').value.trim();
-      if (!name || !pass) return alert("Fill all fields!");
-      if (pass !== 'uss') return alert("Incorrect password!");
-      localStorage.setItem('pakhiiUser', JSON.stringify({ name }));
-      window.location.href = 'index.html';
+      const name = document.getElementById("nameInput").value.trim();
+      const pass = document.getElementById("passInput").value.trim();
+      if (!name || !pass) return alert("Please fill in all fields!");
+      if (pass !== "uss") return alert("Wrong password!");
+
+      localStorage.setItem("pakhiiUser", JSON.stringify({ name }));
+      window.location.href = "/index.html";
     }
   </script>
 </body>
