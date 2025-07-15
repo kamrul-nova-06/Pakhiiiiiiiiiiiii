@@ -1,115 +1,211 @@
 const socket = io();
+let currentUser = null;
+let currentChat = 'group'; // default group chat
+let typing = false;
+let typingTimeout;
 
-let currentUser = localStorage.getItem("userName");
-let password = localStorage.getItem("userPass");
-let currentChat = "group";
+// Login info
+fetch('/user-info')
+  .then(res => res.json())
+  .then(data => {
+    currentUser = data;
+    document.getElementById('chatHeader').innerText = 'Group Chat';
+  });
 
-if (!currentUser || password !== "uss") {
-  currentUser = prompt("Enter your name:");
-  password = prompt("Enter password:");
+const chatBox = document.getElementById('chatBox');
+const chatForm = document.getElementById('chatForm');
+const messageInput = document.getElementById('messageInput');
+const imageInput = document.getElementById('imageInput');
+const userList = document.getElementById('userList');
 
-  if (!currentUser || password !== "uss") {
-    alert("Wrong credentials. Try again.");
-    location.reload();
-  }
-
-  localStorage.setItem("userName", currentUser);
-  localStorage.setItem("userPass", password);
-}
-
-socket.emit("join", currentUser);
-
-const chatBox = document.getElementById("chatBox");
-const messageInput = document.getElementById("messageInput");
-const chatForm = document.getElementById("chatForm");
-const chatHeader = document.getElementById("chatHeader");
-const userList = document.getElementById("userList");
-const imageInput = document.getElementById("imageInput");
-
-chatForm.addEventListener("submit", (e) => {
+chatForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const msg = messageInput.value.trim();
-  if (!msg) return;
-
-  const data = {
-    from: currentUser,
-    to: currentChat,
-    text: msg,
-    type: "text"
-  };
-
-  socket.emit("message", data);
-  appendMessage(data, true);
-  messageInput.value = "";
-});
-
-imageInput.addEventListener("change", () => {
   const file = imageInput.files[0];
-  if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = function () {
-    const data = {
-      from: currentUser,
-      to: currentChat,
-      image: reader.result,
-      type: "image"
-    };
-
-    socket.emit("message", data);
-    appendMessage(data, true);
-  };
-  reader.readAsDataURL(file);
+  if (msg || file) {
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function () {
+        socket.emit('chat message', {
+          from: currentUser.name,
+          to: currentChat,
+          text: msg,
+          image: reader.result,
+        });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      socket.emit('chat message', {
+        from: currentUser.name,
+        to: currentChat,
+        text: msg,
+      });
+    }
+    messageInput.value = '';
+    imageInput.value = '';
+  }
 });
 
-function appendMessage(data, isMine = false) {
-  const div = document.createElement("div");
-  div.classList.add("message");
-  div.classList.add(isMine ? "my-message" : "other-message");
-
-  if (data.type === "text") {
-    div.innerHTML = `<div class="name">${data.from}</div>${data.text}`;
-  } else if (data.type === "image") {
-    div.innerHTML = `<div class="name">${data.from}</div><img src="${data.image}" style="max-width: 100%; border-radius: 10px;" />`;
+socket.on('chat message', (data) => {
+  const messageDiv = document.createElement('div');
+  messageDiv.className = 'message';
+  if (data.from === currentUser.name) {
+    messageDiv.classList.add('my-message');
+  } else {
+    messageDiv.classList.add('other-message');
   }
 
-  chatBox.appendChild(div);
-  chatBox.scrollTop = chatBox.scrollHeight;
-}
+  const nameDiv = document.createElement('div');
+  nameDiv.className = 'name';
+  nameDiv.innerText = data.from;
 
-socket.on("message", (data) => {
-  if (data.to === currentUser || data.to === "group") {
-    appendMessage(data);
-    if (document.hidden) {
-      notifyUser(`${data.from}: ${data.type === "text" ? data.text : "📷 Image"}`);
+  messageDiv.appendChild(nameDiv);
+
+  if (data.image) {
+    const img = document.createElement('img');
+    img.src = data.image;
+    img.style.maxWidth = '100%';
+    img.style.borderRadius = '8px';
+    img.style.marginTop = '5px';
+    messageDiv.appendChild(img);
+  }
+
+  if (data.text) {
+    const text = document.createElement('div');
+    text.innerText = data.text;
+    messageDiv.appendChild(text);
+  }
+
+  if (data.to === currentChat || data.to === currentUser.name || data.from === currentUser.name) {
+    chatBox.appendChild(messageDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    if (data.from !== currentUser.name) {
+      playNotification();
+      flashTitle(`${data.from} sent a message`);
     }
   }
 });
 
-socket.on("userList", (users) => {
-  userList.innerHTML = "";
-  users.forEach((u) => {
-    if (u === currentUser) return;
-
-    const userDiv = document.createElement("div");
-    userDiv.className = "user";
-    userDiv.innerHTML = `
-      <div class="avatar">${u.charAt(0).toUpperCase()}</div>
-      <div class="label" style="font-size:12px;">${u}</div>
-    `;
-    userDiv.onclick = () => openPrivateChat(u);
-    userList.appendChild(userDiv);
-  });
-});
+function openGroupChat() {
+  currentChat = 'group';
+  document.getElementById('chatHeader').innerText = 'Group Chat';
+  chatBox.innerHTML = '';
+  socket.emit('load chat', { to: 'group' });
+}
 
 function openPrivateChat(user) {
   currentChat = user;
-  chatHeader.innerText = `Chat with ${user}`;
-  chatBox.innerHTML = "";
+  document.getElementById('chatHeader').innerText = `Chat with ${user}`;
+  chatBox.innerHTML = '';
+  socket.emit('load chat', { to: user });
 }
 
-function openGroupChat() {
-  currentChat = "group";
-  chatHeader.innerText = "Group Chat";
-  chatBox.innerHTML = "";
+socket.on('chat history', (messages) => {
+  chatBox.innerHTML = '';
+  messages.forEach((data) => {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message';
+    messageDiv.classList.add(data.from === currentUser.name ? 'my-message' : 'other-message');
+
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'name';
+    nameDiv.innerText = data.from;
+
+    messageDiv.appendChild(nameDiv);
+
+    if (data.image) {
+      const img = document.createElement('img');
+      img.src = data.image;
+      img.style.maxWidth = '100%';
+      img.style.borderRadius = '8px';
+      img.style.marginTop = '5px';
+      messageDiv.appendChild(img);
+    }
+
+    if (data.text) {
+      const text = document.createElement('div');
+      text.innerText = data.text;
+      messageDiv.appendChild(text);
+    }
+
+    chatBox.appendChild(messageDiv);
+  });
+  chatBox.scrollTop = chatBox.scrollHeight;
+});
+
+messageInput.addEventListener('input', () => {
+  if (!typing) {
+    typing = true;
+    socket.emit('typing', { from: currentUser.name, to: currentChat });
+    typingTimeout = setTimeout(stopTyping, 2000);
+  } else {
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(stopTyping, 2000);
+  }
+});
+
+function stopTyping() {
+  typing = false;
+  socket.emit('stop typing', { from: currentUser.name, to: currentChat });
 }
+
+socket.on('typing', (user) => {
+  document.getElementById('chatHeader').innerText = `${user} is typing...`;
+});
+
+socket.on('stop typing', () => {
+  document.getElementById('chatHeader').innerText = currentChat === 'group'
+    ? 'Group Chat'
+    : `Chat with ${currentChat}`;
+});
+
+function playNotification() {
+  const audio = new Audio('/notify.mp3');
+  audio.play().catch(() => {});
+}
+
+let defaultTitle = document.title;
+function flashTitle(msg) {
+  let flashing = true;
+  let i = 0;
+  const interval = setInterval(() => {
+    document.title = i % 2 === 0 ? msg : defaultTitle;
+    i++;
+    if (!flashing) {
+      clearInterval(interval);
+      document.title = defaultTitle;
+    }
+  }, 1000);
+
+  setTimeout(() => {
+    flashing = false;
+  }, 6000);
+}
+
+socket.on('user list', (users) => {
+  userList.innerHTML = '';
+  users.forEach(user => {
+    const userDiv = document.createElement('div');
+    userDiv.className = 'user';
+    userDiv.onclick = () => openPrivateChat(user.name);
+
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.innerText = user.name.charAt(0).toUpperCase();
+
+    if (user.active) {
+      avatar.style.border = '2px solid red';
+    }
+
+    const label = document.createElement('div');
+    label.innerText = user.name;
+    label.style.fontSize = '12px';
+
+    userDiv.appendChild(avatar);
+    userDiv.appendChild(label);
+
+    userList.appendChild(userDiv);
+  });
+});
