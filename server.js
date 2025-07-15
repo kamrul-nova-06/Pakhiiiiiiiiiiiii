@@ -26,5 +26,7 @@ socket.on('stop typing', ({ from, to }) => { socket.broadcast.emit('stop typing'
 
 socket.on('disconnect', () => { const user = users.find(u => u.name === username); if (user) user.active = false; io.emit('user list', users); }); });
 
-server.listen(PORT, () => { console.log(Server listening on port ${PORT}); });
+server.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+});
 
