@@ -1,92 +1,96 @@
-const express = require('express');
-const app = express();
-const http = require('http');
-const server = http.createServer(app);
-const { Server } = require('socket.io');
-const io = new Server(server);
-const multer = require('multer');
-const path = require('path');
-const cookieParser = require('cookie-parser');
-
-app.use(express.static('public'));
-app.use(cookieParser());
-app.use(express.urlencoded({ extended: true }));
-
-const onlineUsers = {};
-
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
-
-app.get('/', (req, res) => {
-  if (!req.cookies.name || req.cookies.pass !== 'uss') {
-    return res.sendFile(__dirname + '/public/login.html');
-  }
-  res.sendFile(__dirname + '/public/index.html');
-});
-
-app.post('/login', (req, res) => {
-  const { name, pass } = req.body;
-  if (pass === 'uss') {
-    res.setHeader('Set-Cookie', [`name=${encodeURIComponent(name)}`, `pass=uss`]);
-    return res.redirect('/');
-  }
-  res.send('<h3>Wrong password</h3><a href="/">Try again</a>');
-});
-
-app.post('/upload', upload.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).send('No image provided');
-  const base64Image = req.file.buffer.toString('base64');
-  const mimeType = req.file.mimetype;
-  res.json({ image: `data:${mimeType};base64,${base64Image}` });
-});
-
-io.on('connection', (socket) => {
-  const userName = socket.handshake.headers.cookie
-    ?.split('; ')
-    ?.find(row => row.startsWith('name='))
-    ?.split('=')[1] || 'Unknown';
-
-  socket.userName = decodeURIComponent(userName);
-  onlineUsers[socket.userName] = socket.id;
-
-  io.emit('updateUsers', Object.keys(onlineUsers));
-
-  socket.on('groupMessage', (data) => {
-    io.emit('groupMessage', {
-      name: socket.userName,
-      message: data.message,
-      image: data.image || null
-    });
-  });
-
-  socket.on('privateMessage', ({ to, message, image }) => {
-    const toSocketId = onlineUsers[to];
-    if (toSocketId) {
-      io.to(toSocketId).emit('privateMessage', {
-        from: socket.userName,
-        message,
-        image: image || null
-      });
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login - Pakhiiiiiiiiiiiii 🐦</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #007bff, #00d4ff);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
-  });
+    .login-box {
+      background: white;
+      padding: 30px 25px;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.2);
+      width: 300px;
+    }
+    .login-box h2 {
+      color: #007bff;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .login-box input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+    .login-box button {
+      width: 100%;
+      padding: 12px;
+      background: #007bff;
+      color: white;
+      border: none;
+      font-size: 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .login-box button:hover {
+      background: #0056b3;
+    }
+    #errorMsg {
+      text-align: center;
+      color: red;
+      font-size: 0.9rem;
+      height: 20px;
+    }
+  </style>
+</head>
+<body>
 
-  socket.on('typing', (target) => {
-    if (target === 'group') {
-      socket.broadcast.emit('typing', { from: socket.userName, target });
-    } else {
-      const toSocketId = onlineUsers[target];
-      if (toSocketId) {
-        io.to(toSocketId).emit('typing', { from: socket.userName, target });
+  <div class="login-box">
+    <h2>Pakhiiiiiiiiiiiii 🐦</h2>
+    <input type="text" id="nameInput" placeholder="Enter your name" />
+    <input type="password" id="passInput" placeholder="Password" />
+    <button onclick="login()">Login</button>
+    <div id="errorMsg"></div>
+  </div>
+
+  <script>
+    async function login() {
+      const name = document.getElementById('nameInput').value.trim();
+      const pass = document.getElementById('passInput').value.trim();
+      const error = document.getElementById('errorMsg');
+
+      if (!name || !pass) {
+        error.textContent = 'সব ফিল্ড পূরণ করুন';
+        return;
+      }
+
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, pass })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        window.location.href = '/';
+      } else {
+        error.textContent = 'Password ভুল';
       }
     }
-  });
+  </script>
 
-  socket.on('disconnect', () => {
-    delete onlineUsers[socket.userName];
-    io.emit('updateUsers', Object.keys(onlineUsers));
-  });
-});
-
-server.listen(3000, () => {
-  console.log('✅ Server running on port 3000');
-});
+</body>
+</html>
