@@ -1,150 +1,143 @@
 const socket = io();
-let currentChat = 'group';
-let myName = getCookie('name') || 'Unknown';
+let myName = "";
+let currentChat = "group"; // default group mode
 
-const chatBox = document.getElementById('chatBox');
-const messageInput = document.getElementById('messageInput');
-const chatForm = document.getElementById('chatForm');
-const userList = document.getElementById('userList');
-const chatHeader = document.getElementById('chatHeader');
-const imageInput = document.getElementById('imageInput');
+// ফর্ম লোড হলে ইউজার ইনফো আনা
+fetch("/user-info")
+  .then((res) => res.json())
+  .then((data) => {
+    myName = data.name;
+    socket.emit("register", myName);
+  });
 
-function getCookie(name) {
-  const match = document.cookie.match(new RegExp(name + '=([^;]+)'));
-  return match ? decodeURIComponent(match[1]) : null;
-}
+// Active user list render
+socket.on("user list", (users) => {
+  const userList = document.getElementById("userList");
+  userList.innerHTML = "";
 
-function scrollToBottom() {
-  chatBox.scrollTop = chatBox.scrollHeight;
-}
+  const selector = document.getElementById("chatModeSelector");
+  selector.innerHTML = `<option value="group">🌐 Group Chat</option>`;
 
-function showMessage({ name, message, image, isOwn }) {
-  const msgDiv = document.createElement('div');
-  msgDiv.classList.add('message');
-  msgDiv.classList.add(isOwn ? 'my-message' : 'other-message');
+  users.forEach((user) => {
+    const div = document.createElement("div");
+    div.className = "user";
+    div.innerHTML = `
+      <img src="https://ui-avatars.com/api/?name=${user.name}&background=0084ff&color=fff" />
+      ${user.name === myName ? "<span>You</span>" : `<span>${user.name}</span>`}
+      ${user.active && user.name !== myName ? '<div class="dot"></div>' : ""}
+    `;
+    userList.appendChild(div);
 
-  if (!isOwn) {
-    const nameTag = document.createElement('div');
-    nameTag.className = 'name';
-    nameTag.innerText = name;
-    msgDiv.appendChild(nameTag);
-  }
-
-  if (message) msgDiv.appendChild(document.createTextNode(message));
-
-  if (image) {
-    const img = document.createElement('img');
-    img.src = image;
-    img.style.maxWidth = '200px';
-    img.style.borderRadius = '8px';
-    img.style.marginTop = '5px';
-    msgDiv.appendChild(img);
-  }
-
-  chatBox.appendChild(msgDiv);
-  scrollToBottom();
-}
-
-function openGroupChat() {
-  currentChat = 'group';
-  chatHeader.innerText = 'Group Chat';
-  chatBox.innerHTML = '';
-}
-
-socket.on('groupMessage', ({ name, message, image }) => {
-  const isOwn = name === myName;
-  if (currentChat === 'group') {
-    showMessage({ name, message, image, isOwn });
-    if (!isOwn) playNotification();
-  }
-});
-
-socket.on('privateMessage', ({ from, message, image }) => {
-  const isOwn = from === myName;
-  if (currentChat === from || isOwn) {
-    showMessage({ name: from, message, image, isOwn });
-    if (!isOwn) playNotification();
-  }
-});
-
-socket.on('updateUsers', (users) => {
-  userList.innerHTML = '';
-  users.forEach(user => {
-    const userDiv = document.createElement('div');
-    userDiv.className = 'user';
-    userDiv.onclick = () => {
-      currentChat = user;
-      chatHeader.innerText = `Chat with ${user}`;
-      chatBox.innerHTML = '';
-    };
-
-    const avatar = document.createElement('div');
-    avatar.className = 'avatar';
-    avatar.innerText = user[0]?.toUpperCase();
-
-    if (user !== myName) avatar.style.boxShadow = '0 0 0 3px red';
-
-    userDiv.appendChild(avatar);
-    const label = document.createElement('div');
-    label.innerText = user;
-    label.style.fontSize = '12px';
-    label.style.marginTop = '4px';
-    userDiv.appendChild(label);
-
-    userList.appendChild(userDiv);
+    // dropdown add
+    if (user.name !== myName) {
+      const opt = document.createElement("option");
+      opt.value = user.name;
+      opt.textContent = `🔒 ${user.name}`;
+      selector.appendChild(opt);
+    }
   });
 });
 
-chatForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const msg = messageInput.value.trim();
-  const file = imageInput.files[0];
+// Load messages
+function loadMessages() {
+  socket.emit("load chat", { to: currentChat });
+}
 
-  if (!msg && !file) return;
+socket.on("chat history", (msgs) => {
+  const messages = document.getElementById("messages");
+  messages.innerHTML = "";
+  msgs.forEach((msg) => {
+    showMessage(msg);
+  });
+  messages.scrollTop = messages.scrollHeight;
+});
 
-  let imageUrl = null;
+// Show message
+function showMessage(msg) {
+  const div = document.createElement("div");
+  div.classList.add("message");
+  div.classList.add(msg.from === myName ? "self" : "other");
 
-  if (file) {
-    const formData = new FormData();
-    formData.append('image', file);
-    const res = await fetch('/upload', { method: 'POST', body: formData });
-    const data = await res.json();
-    imageUrl = data.image;
-    imageInput.value = '';
+  if (msg.image) {
+    div.innerHTML = `<img src="${msg.image}" style="max-width: 100%;" />`;
+  }
+  if (msg.text) {
+    div.innerHTML += `<div>${msg.text}</div>`;
   }
 
-  if (currentChat === 'group') {
-    socket.emit('groupMessage', { message: msg, image: imageUrl });
+  document.getElementById("messages").appendChild(div);
+}
+
+// Send message
+document.getElementById("sendBtn").onclick = () => {
+  const text = document.getElementById("messageInput").value.trim();
+  const file = document.getElementById("imageInput").files[0];
+
+  if (!text && !file) return;
+
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      socket.emit("chat message", {
+        from: myName,
+        to: currentChat,
+        image: e.target.result,
+        text,
+      });
+    };
+    reader.readAsDataURL(file);
   } else {
-    socket.emit('privateMessage', {
+    socket.emit("chat message", {
+      from: myName,
       to: currentChat,
-      message: msg,
-      image: imageUrl,
+      text,
     });
   }
 
-  if (msg || imageUrl) {
-    showMessage({ name: myName, message: msg, image: imageUrl, isOwn: true });
-    messageInput.value = '';
+  document.getElementById("messageInput").value = "";
+  document.getElementById("imageInput").value = "";
+};
+
+// Receive new message
+socket.on("chat message", (msg) => {
+  if (
+    msg.to === "group" ||
+    msg.to === myName ||
+    msg.from === myName ||
+    currentChat === "group"
+  ) {
+    showMessage(msg);
+    const messages = document.getElementById("messages");
+    messages.scrollTop = messages.scrollHeight;
   }
 });
 
-messageInput.addEventListener('input', () => {
-  socket.emit('typing', currentChat);
+// Mode Change
+document.getElementById("chatModeSelector").onchange = (e) => {
+  currentChat = e.target.value;
+  loadMessages();
+};
+
+// Typing
+const msgInput = document.getElementById("messageInput");
+msgInput.addEventListener("input", () => {
+  socket.emit("typing", { from: myName, to: currentChat });
+  setTimeout(() => {
+    socket.emit("stop typing", { from: myName, to: currentChat });
+  }, 1000);
 });
 
-socket.on('typing', ({ from, target }) => {
-  if (from !== myName && currentChat === target) {
-    chatHeader.innerText = `${from} typing...`;
-    setTimeout(() => {
-      chatHeader.innerText = currentChat === 'group' ? 'Group Chat' : `Chat with ${currentChat}`;
-    }, 2000);
+socket.on("typing", (from) => {
+  if (from !== myName) {
+    document.getElementById("typing").textContent = `${from} is typing...`;
   }
 });
 
-function playNotification() {
-  if (document.hidden) {
-    const audio = new Audio('/notify.mp3');
-    audio.play().catch(() => {});
-  }
-}
+socket.on("stop typing", () => {
+  document.getElementById("typing").textContent = "";
+});
+
+// Initial load
+setTimeout(() => {
+  loadMessages();
+}, 1000);
