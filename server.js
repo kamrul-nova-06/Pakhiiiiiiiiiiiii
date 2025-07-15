@@ -1,32 +1,66 @@
 const express = require('express');
-const app = express();
-const http = require('http').createServer(app);
-const io = require('socket.io')(http);
 const path = require('path');
+const http = require('http');
+const socketIO = require('socket.io');
 
-// serve public folder
+const app = express();
+const server = http.createServer(app);
+const io = socketIO(server);
+
 app.use(express.static(path.join(__dirname, 'public')));
 
-let users = {}; // socket.id -> user info
+let users = {}; // socket.id => { name, number }
 
 io.on('connection', socket => {
   socket.on('login', user => {
     users[socket.id] = user;
-    socket.emit('loggedin', user);
+    io.emit('active-users', Object.values(users));
   });
 
-  socket.on('chat message', msg => {
-    io.emit('chat message', { user: users[socket.id], text: msg });
+  socket.on('chat message', ({ to, message }) => {
+    if (to === 'group') {
+      io.emit('group message', {
+        user: users[socket.id],
+        message,
+      });
+    } else {
+      for (let sid in users) {
+        if (users[sid].number === to || sid === socket.id) {
+          io.to(sid).emit('private message', {
+            from: users[socket.id],
+            to,
+            message,
+          });
+        }
+      }
+    }
   });
 
-  socket.on('chat image', img => {
-    io.emit('chat image', { user: users[socket.id], image: img });
+  socket.on('image', ({ to, image }) => {
+    if (to === 'group') {
+      io.emit('group image', {
+        user: users[socket.id],
+        image,
+      });
+    } else {
+      for (let sid in users) {
+        if (users[sid].number === to || sid === socket.id) {
+          io.to(sid).emit('private image', {
+            from: users[socket.id],
+            image,
+          });
+        }
+      }
+    }
   });
 
   socket.on('disconnect', () => {
     delete users[socket.id];
+    io.emit('active-users', Object.values(users));
   });
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
+});
