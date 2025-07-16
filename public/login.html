@@ -1,41 +1,139 @@
-<!-- login.html --><!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <title>Login | Pakhiiiiiiiiiiiii 🐦</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; background: #f1f5f9; }
-    .login-box { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 90%; max-width: 400px; }
-    input, button { width: 100%; padding: 10px; margin: 10px 0; font-size: 16px; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f1f5f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .login-box {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    .login-box h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .login-box input, .login-box button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+
+    input[type="file"] {
+      padding: 5px;
+    }
+
+    #profilePreview {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 50%;
+      display: block;
+      margin: 10px auto;
+    }
+
+    .error {
+      color: red;
+      font-size: 14px;
+      text-align: center;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
   <div class="login-box">
-    <h2>Pakhiiiiiiiiiiiii 🐦</h2>
-    <input type="text" id="username" placeholder="Enter your name" required />
-    <input type="password" id="password" placeholder="Password (uss)" required />
-    <input type="file" id="profilePic" accept="image/*" />
+    <h2>Login to Pakhiiiiiiiiiiiii 🐦</h2>
+
+    <div id="error" class="error"></div>
+
+    <input type="text" id="username" placeholder="Enter your name" />
+    <input type="password" id="password" placeholder="Enter password" />
+    
+    <input type="file" id="profilePicInput" accept="image/*" />
+    <img id="profilePreview" src="/default1.png" alt="Profile Preview" />
+
     <button onclick="login()">Login</button>
-  </div>  <script>
-    function login() {
-      const name = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value;
-      if (!name || password !== 'uss') return alert('Invalid Credentials');
-      localStorage.setItem('username', name);
-      const file = document.getElementById('profilePic').files[0];
+  </div>
+
+  <script>
+    const profileInput = document.getElementById("profilePicInput");
+    const profilePreview = document.getElementById("profilePreview");
+
+    const defaultPics = ["/default1.png", "/default2.png"];
+
+    profileInput.addEventListener("change", function () {
+      const file = profileInput.files[0];
       if (file) {
         const reader = new FileReader();
         reader.onload = function (e) {
-          localStorage.setItem('profilePic', e.target.result);
-          window.location.href = 'index.html';
+          profilePreview.src = e.target.result;
         };
         reader.readAsDataURL(file);
-      } else {
-        const defaults = ["/default1.png", "/default2.png"];
-        const randomPic = defaults[Math.floor(Math.random() * 2)];
-        localStorage.setItem('profilePic', randomPic);
-        window.location.href = 'index.html';
       }
+    });
+
+    async function login() {
+      const name = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+      const errorDiv = document.getElementById("error");
+
+      if (!name || !password) {
+        errorDiv.textContent = "Fill in all fields";
+        return;
+      }
+
+      if (password !== "uss") {
+        errorDiv.textContent = "Wrong password!";
+        return;
+      }
+
+      const response = await fetch("/check-username?name=" + encodeURIComponent(name));
+      const data = await response.json();
+
+      if (data.exists) {
+        const suggested = name + Math.floor(Math.random() * 1000);
+        errorDiv.textContent = `Name taken. Try: ${suggested}`;
+        return;
+      }
+
+      let profilePic = profilePreview.src;
+      if (profilePic.includes("default1") || profilePic.includes("default2")) {
+        profilePic = defaultPics[Math.floor(Math.random() * 2)];
+      }
+
+      const user = {
+        name,
+        profilePic,
+        password
+      };
+
+      localStorage.setItem("user", JSON.stringify(user));
+      window.location.href = "/index.html";
     }
-  </script></body>
+
+    // Auto-login
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      window.location.href = "/index.html";
+    }
+  </script>
+</body>
 </html>
