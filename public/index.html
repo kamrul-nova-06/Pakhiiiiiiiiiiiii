@@ -1,72 +1,84 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pakhiiiiiiiiiiiii 🐦</title>
-  <link rel="icon" href="chat-icon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     * {
       box-sizing: border-box;
     }
+
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
       background: #f1f5f9;
     }
+
     header {
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      justify-content: space-between;
       background: #1e40af;
       color: white;
       padding: 10px 15px;
     }
+
     header img {
-      height: 30px;
+      height: 32px;
     }
+
     header h1 {
       font-size: 18px;
       margin: 0;
     }
+
     #createGroupBtn {
-      background: #facc15;
-      color: black;
-      padding: 6px 12px;
-      border-radius: 5px;
-      font-weight: bold;
+      background: #334155;
+      border: none;
+      color: white;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 14px;
       cursor: pointer;
     }
-    .scroll-users {
+
+    #userScroll {
       display: flex;
       overflow-x: auto;
-      padding: 10px;
-      background: white;
+      background: #e2e8f0;
+      padding: 10px 5px;
       gap: 10px;
     }
-    .user-circle {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      background: #e5e7eb;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      position: relative;
+
+    .user-item {
+      text-align: center;
+      min-width: 60px;
     }
-    .dot {
-      width: 10px;
-      height: 10px;
-      background: red;
+
+    .user-item img {
+      width: 45px;
+      height: 45px;
       border-radius: 50%;
-      position: absolute;
-      bottom: 3px;
-      right: 3px;
+      object-fit: cover;
+      border: 2px solid transparent;
     }
-    .chat-list {
+
+    .user-item.active img {
+      border-color: red;
+    }
+
+    .user-item span {
+      display: block;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    #chatList {
       padding: 10px;
     }
-    .chat-user {
+
+    .chat-entry {
       display: flex;
       align-items: center;
       background: white;
@@ -74,71 +86,106 @@
       margin-bottom: 8px;
       border-radius: 8px;
       cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
-    .chat-user img {
+
+    .chat-entry img {
       width: 40px;
       height: 40px;
       border-radius: 50%;
       margin-right: 10px;
     }
-    .chat-user span {
-      font-weight: 600;
+
+    .chat-entry .info {
+      flex: 1;
+    }
+
+    .chat-entry .info .name {
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .chat-entry .info .last {
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    @media (max-width: 480px) {
+      header h1 {
+        font-size: 16px;
+      }
+      .user-item img {
+        width: 40px;
+        height: 40px;
+      }
     }
   </style>
 </head>
 <body>
+
   <header>
-    <img src="chat-icon.png" alt="logo" />
+    <img src="/chat-icon.png" alt="Logo" />
     <h1>Pakhiiiiiiiiiiiii 🐦</h1>
-    <div id="createGroupBtn" onclick="window.location.href='group-create.html'">+ Group</div>
-  </header>  <div class="scroll-users" id="userScroll">
-    <!-- Active/Inactive users dynamically insert -->
-  </div>  <div class="chat-list" id="chatList">
-    <!-- Recent chats (user/group) dynamically insert -->
-  </div>  <script>
-    // Example for adding users dynamically
-    const users = [
-      { name: 'Sohan', active: true },
-      { name: 'Rafi', active: false },
-      { name: 'Jony', active: true },
-    ];
+    <button id="createGroupBtn" onclick="location.href='/group-create.html'">Create Group</button>
+  </header>
 
+  <div id="userScroll"></div>
+
+  <div id="chatList"></div>
+
+  <script>
     const userScroll = document.getElementById('userScroll');
-    users.forEach(user => {
-      const div = document.createElement('div');
-      div.className = 'user-circle';
-      div.textContent = user.name.charAt(0).toUpperCase();
-      if (user.active) {
-        const dot = document.createElement('div');
-        dot.className = 'dot';
-        div.appendChild(dot);
-      }
-      userScroll.appendChild(div);
-    });
-
-    // Example recent chat
     const chatList = document.getElementById('chatList');
-    const chats = [
-      { name: 'Sohan', avatar: 'dp1.png' },
-      { name: 'DU Brothers', avatar: 'group.png' },
-    ];
+    const currentUser = JSON.parse(localStorage.getItem('user'));
 
-    chats.forEach(chat => {
-      const div = document.createElement('div');
-      div.className = 'chat-user';
-      div.onclick = () => {
-        if (chat.name === 'DU Brothers') {
-          window.location.href = 'group-chat.html';
-        } else {
-          window.location.href = 'private-chat.html';
-        }
-      };
+    fetch("/all-users")
+      .then(res => res.json())
+      .then(users => {
+        users.forEach(u => {
+          const userDiv = document.createElement("div");
+          userDiv.classList.add("user-item");
+          if (u.active) userDiv.classList.add("active");
+          userDiv.innerHTML = `
+            <img src="${u.profilePic || '/default1.png'}" />
+            <span>${u.name}</span>
+          `;
+          userDiv.onclick = () => {
+            if (u.name !== currentUser.name) {
+              localStorage.setItem("chatTo", u.name);
+              window.location.href = "/private-chat.html";
+            }
+          };
+          userScroll.appendChild(userDiv);
+        });
+      });
 
-      div.innerHTML = `
-        <img src="${chat.avatar}" alt="avatar" />
-        <span>${chat.name}</span>
-      `;
-      chatList.appendChild(div);
-    });
-  </script></body>
+    fetch("/chat-history/" + currentUser.name)
+      .then(res => res.json())
+      .then(history => {
+        history.forEach(chat => {
+          const chatDiv = document.createElement("div");
+          chatDiv.classList.add("chat-entry");
+          chatDiv.onclick = () => {
+            if (chat.type === "private") {
+              localStorage.setItem("chatTo", chat.name);
+              window.location.href = "/private-chat.html";
+            } else {
+              localStorage.setItem("groupId", chat.groupId);
+              window.location.href = "/group-chat.html";
+            }
+          };
+
+          chatDiv.innerHTML = `
+            <img src="${chat.profilePic || '/default2.png'}" />
+            <div class="info">
+              <div class="name">${chat.name}</div>
+              <div class="last">${chat.lastMessage || 'No messages yet'}</div>
+            </div>
+          `;
+          chatList.appendChild(chatDiv);
+        });
+      });
+  </script>
+
+</body>
 </html>
