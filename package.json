@@ -1,17 +1,17 @@
 {
-  "name": "pakhiiiiiiiiiiiii-chat-app",
+  "name": "pakhiiiiiiiiiiiii",
   "version": "1.0.0",
-  "description": "Messenger-style real-time chat application with group and private chat, image/file sending, typing indicator, and offline support.",
+  "description": "Pakhiiiiiiiiiiiii 🐦 - Where friends connect, laugh, and share together.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
-  "author": "DU-LINK",
-  "license": "MIT",
   "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
     "express": "^4.18.2",
     "socket.io": "^4.7.2",
-    "mime-types": "^2.1.35",
-    "uuid": "^9.0.1"
+    "moment": "^2.29.4",
+    "mime-types": "^2.1.35"
   }
 }
