@@ -1,13 +1,10 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Private Chat | Pakhiiiiiiiiiiiii 🐦</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <link rel="manifest" href="/manifest.json" />
+  <title>Private Chat - Pakhiiiiiiiiiiiii 🐦</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    * {
-      box-sizing: border-box;
-    }
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
@@ -15,124 +12,211 @@
       display: flex;
       flex-direction: column;
       height: 100vh;
-      overflow: hidden;
-    }#header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 15px;
-  background: #1e40af;
-  color: white;
-}
+    }
 
-#backBtn {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 20px;
-  cursor: pointer;
-}
+    header {
+      background: #1e40af;
+      color: white;
+      padding: 12px;
+      text-align: center;
+      font-size: 18px;
+    }
 
-#receiverInfo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+    #chatBox {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
 
-#receiverInfo img {
-  width: 35px;
-  height: 35px;
-  border-radius: 50%;
-}
+    .message {
+      max-width: 70%;
+      padding: 8px 12px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      word-wrap: break-word;
+      font-size: 15px;
+    }
 
-#chatBox {
-  flex: 1;
-  padding: 10px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-}
+    .my-message {
+      background: #60a5fa;
+      color: white;
+      margin-left: auto;
+      text-align: right;
+    }
 
-.message {
-  max-width: 75%;
-  padding: 8px 12px;
-  border-radius: 10px;
-  margin-bottom: 10px;
-  word-wrap: break-word;
-  font-size: 15px;
-}
+    .other-message {
+      background: #e2e8f0;
+      color: black;
+      margin-right: auto;
+    }
 
-.my-message {
-  background: #60a5fa;
-  color: white;
-  margin-left: auto;
-  text-align: right;
-}
+    .name {
+      font-size: 12px;
+      font-weight: bold;
+      margin-bottom: 3px;
+    }
 
-.other-message {
-  background: #e2e8f0;
-  color: black;
-  margin-right: auto;
-}
+    .timestamp {
+      font-size: 10px;
+      color: gray;
+      text-align: right;
+      margin-top: 3px;
+    }
 
-.name {
-  font-size: 11px;
-  font-weight: bold;
-  margin-bottom: 3px;
-}
+    #typing {
+      font-size: 12px;
+      padding: 5px 10px;
+      color: gray;
+    }
 
-#chatForm {
-  display: flex;
-  padding: 10px;
-  gap: 5px;
-  background: white;
-}
+    #chatForm {
+      display: flex;
+      gap: 5px;
+      padding: 10px;
+      background: white;
+    }
 
-#messageInput {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 15px;
-}
+    #messageInput {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 15px;
+    }
 
-#sendBtn, #imageBtn {
-  background: #1e40af;
-  color: white;
-  border: none;
-  padding: 10px 12px;
-  border-radius: 8px;
-  font-size: 18px;
-  cursor: pointer;
-}
+    #sendBtn, #imageBtn {
+      background: #1e40af;
+      color: white;
+      border: none;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
 
-#imageInput {
-  display: none;
-}
+    #imageInput {
+      display: none;
+    }
 
-@media screen and (max-width: 480px) {
-  #receiverInfo span {
-    font-size: 14px;
-  }
-}
+    img.chat-image {
+      max-width: 200px;
+      margin-top: 5px;
+      border-radius: 6px;
+    }
 
+    @media screen and (max-width: 480px) {
+      #messageInput {
+        font-size: 14px;
+      }
+    }
   </style>
 </head>
 <body>
-  <div id="header">
-    <button id="backBtn" onclick="goBack()">⬅️</button>
-    <div id="receiverInfo">
-      <img src="default-pic.png" alt="Profile">
-      <span id="receiverName">Receiver</span>
-    </div>
-  </div>  <div id="chatBox"></div>  <form id="chatForm">
-    <input type="text" id="messageInput" placeholder="Type a message..." />
+
+  <header id="privateHeader">🔒 Chat with ...</header>
+
+  <div id="chatBox"></div>
+  <div id="typing"></div>
+
+  <form id="chatForm">
+    <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off" />
     <label for="imageInput" id="imageBtn">📎</label>
     <input type="file" id="imageInput" accept="image/*" />
     <button type="submit" id="sendBtn">➤</button>
-  </form>  <script src="/socket.io/socket.io.js"></script>  <script src="/script.js"></script>  <script>
-    function goBack() {
-      window.location.href = "/index.html";
+  </form>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    const chatBox = document.getElementById('chatBox');
+    const messageInput = document.getElementById('messageInput');
+    const chatForm = document.getElementById('chatForm');
+    const typingDiv = document.getElementById('typing');
+    const privateHeader = document.getElementById('privateHeader');
+    const imageInput = document.getElementById('imageInput');
+
+    const currentUser = JSON.parse(localStorage.getItem('user'));
+    const chatWith = JSON.parse(localStorage.getItem('privateWith'));
+
+    if (!currentUser || !chatWith) {
+      alert("Unauthorized access.");
+      window.location.href = "index.html";
     }
-  </script></body>
-  </html>
+
+    const roomId = [currentUser.name, chatWith.name].sort().join('_');
+    privateHeader.textContent = `🔒 Chat with ${chatWith.name}`;
+    socket.emit('join-private', roomId);
+
+    socket.on('private-message', (msg) => {
+      addMessage(msg);
+    });
+
+    socket.on('private-typing', (name) => {
+      if (name !== currentUser.name) {
+        typingDiv.textContent = `${name} is typing...`;
+        setTimeout(() => {
+          typingDiv.textContent = '';
+        }, 1500);
+      }
+    });
+
+    chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = messageInput.value.trim();
+      if (!text) return;
+      const msg = {
+        sender: currentUser.name,
+        receiver: chatWith.name,
+        room: roomId,
+        content: text,
+        time: new Date().toLocaleTimeString(),
+        type: 'text',
+      };
+      socket.emit('send-private-message', msg);
+      addMessage(msg, true);
+      messageInput.value = '';
+    });
+
+    messageInput.addEventListener('input', () => {
+      socket.emit('typing-private', { room: roomId, name: currentUser.name });
+    });
+
+    imageInput.addEventListener('change', () => {
+      const file = imageInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const msg = {
+          sender: currentUser.name,
+          receiver: chatWith.name,
+          room: roomId,
+          content: reader.result,
+          time: new Date().toLocaleTimeString(),
+          type: 'image',
+        };
+        socket.emit('send-private-message', msg);
+        addMessage(msg, true);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function addMessage(msg, self = false) {
+      const div = document.createElement('div');
+      div.className = 'message ' + (msg.sender === currentUser.name || self ? 'my-message' : 'other-message');
+      let innerHTML = `<div class="name">${msg.sender}</div>`;
+      if (msg.type === 'image') {
+        innerHTML += `<img src="${msg.content}" class="chat-image" />`;
+      } else {
+        innerHTML += msg.content;
+      }
+      innerHTML += `<div class="timestamp">${msg.time}</div>`;
+      div.innerHTML = innerHTML;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  </script>
+</body>
+</html>
