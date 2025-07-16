@@ -1,9 +1,9 @@
 const express = require('express');
 const http = require('http');
-const { Server } = require('socket.io');
-const bodyParser = require('body-parser');
-const cookieParser = require('cookie-parser');
 const path = require('path');
+const mime = require('mime-types');
+const { Server } = require('socket.io');
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const server = http.createServer(app);
@@ -11,90 +11,124 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 
+// Serve static files (html, css, js, images)
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(bodyParser.json());
-app.use(cookieParser());
 
-// ------------------------- Auth Middleware -------------------------
+// In-memory data store
+let users = {};           // { socketId: { name, pic, active, lastSeen } }
+let usernames = {};       // { name: socketId }
+let messages = {
+  group: []               // [{ sender, content, type, timestamp }]
+};
+let privateChats = {};    // { name1_name2: [messages] }
 
-app.use((req, res, next) => {
-  if (!req.cookies.name || req.cookies.pass !== 'uss') {
-    if (req.method === 'POST' && req.url === '/login') {
-      const { name, pass } = req.body;
-      if (pass === 'uss') {
-        res.cookie('name', name, { maxAge: 7 * 24 * 60 * 60 * 1000 });
-        res.cookie('pass', pass, { maxAge: 7 * 24 * 60 * 60 * 1000 });
-        return res.json({ success: true });
-      } else {
-        return res.status(403).json({ success: false });
-      }
-    } else {
-      return res.sendFile(path.join(__dirname, 'public', 'login.html'));
-    }
-  } else {
-    req.user = { name: req.cookies.name };
-    next();
-  }
+// Routes
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ------------------------- API Route -------------------------
+// Socket.io logic
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
 
-app.get('/user-info', (req, res) => {
-  res.json({ name: req.cookies.name });
-});
-
-// ------------------------- Memory DB -------------------------
-
-let users = []; // { name, ip, active }
-let messages = []; // { from, to, text, time }
-
-// ------------------------- Socket.io -------------------------
-
-io.on('connection', socket => {
-  const ip = socket.handshake.address;
-  let username = '';
-
-  socket.on('register', name => {
-    username = name;
-    const existing = users.find(u => u.name === name);
-    if (existing) {
-      existing.active = true;
-    } else {
-      users.push({ name, ip, active: true });
+  socket.on('login', ({ name, pic }) => {
+    // Check duplicate username
+    if (Object.values(users).find(u => u.name === name)) {
+      socket.emit('name-taken');
+      return;
     }
-    io.emit('user list', users);
+
+    users[socket.id] = {
+      name,
+      pic,
+      active: true,
+      lastSeen: new Date()
+    };
+
+    usernames[name] = socket.id;
+
+    // Join group room
+    socket.join('group');
+
+    // Send chat history
+    socket.emit('chat-history', messages.group);
+
+    // Update user list to all
+    io.emit('user-list', getAllUsers());
+
+    console.log(`${name} logged in`);
   });
 
-  socket.on('chat message', msg => {
-    msg.time = Date.now();
-    messages.push(msg);
-    io.emit('chat message', msg);
+  socket.on('send-message', (msg) => {
+    const user = users[socket.id];
+    if (!user) return;
+
+    const data = {
+      sender: user.name,
+      content: msg.content,
+      type: msg.type || 'text',
+      timestamp: new Date().toLocaleTimeString()
+    };
+
+    if (msg.to === 'group') {
+      messages.group.push(data);
+      io.to('group').emit('new-message', data);
+    } else {
+      const targetId = usernames[msg.to];
+      if (!targetId) return;
+
+      const key = createPrivateKey(user.name, msg.to);
+      if (!privateChats[key]) privateChats[key] = [];
+      privateChats[key].push(data);
+
+      io.to(socket.id).emit('new-message', data);
+      io.to(targetId).emit('new-message', data);
+    }
   });
 
-  socket.on('load chat', ({ to }) => {
-    const relevant = messages.filter(m =>
-      m.to === to || m.from === to || m.to === 'group'
-    );
-    socket.emit('chat history', relevant);
+  socket.on('typing', (to) => {
+    const user = users[socket.id];
+    if (!user) return;
+
+    if (to === 'group') {
+      socket.to('group').emit('typing', user.name);
+    } else {
+      const targetId = usernames[to];
+      if (targetId) io.to(targetId).emit('typing', user.name);
+    }
   });
 
-  socket.on('typing', ({ from, to }) => {
-    socket.broadcast.emit('typing', from);
-  });
-
-  socket.on('stop typing', ({ from, to }) => {
-    socket.broadcast.emit('stop typing');
+  socket.on('get-private-chat', (withUser) => {
+    const me = users[socket.id];
+    const key = createPrivateKey(me.name, withUser);
+    const chat = privateChats[key] || [];
+    socket.emit('private-history', { withUser, chat });
   });
 
   socket.on('disconnect', () => {
-    const user = users.find(u => u.name === username);
-    if (user) user.active = false;
-    io.emit('user list', users);
+    const user = users[socket.id];
+    if (user) {
+      users[socket.id].active = false;
+      users[socket.id].lastSeen = new Date();
+      io.emit('user-list', getAllUsers());
+      console.log(user.name, 'disconnected');
+    }
   });
 });
 
-// ------------------------- Start Server -------------------------
+// Helper: get all user data
+function getAllUsers() {
+  return Object.values(users).map(u => ({
+    name: u.name,
+    pic: u.pic,
+    active: u.active
+  }));
+}
+
+function createPrivateKey(name1, name2) {
+  return [name1, name2].sort().join('_');
+}
 
 server.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });
