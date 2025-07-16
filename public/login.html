@@ -1,162 +1,41 @@
-<!DOCTYPE html>
-<html lang="en">
+<!-- login.html --><!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Messenger | Pakhiiiiiiiiiiiii 🐦</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Login | Pakhiiiiiiiiiiiii 🐦</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    * {
-      box-sizing: border-box;
-    }
-    body, html {
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: #f1f5f9;
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-
-    #topBar {
-      background: #1e40af;
-      color: white;
-      padding: 10px 15px;
-      font-size: 20px;
-      font-weight: bold;
-      text-align: center;
-    }
-
-    #userScrollBar {
-      background: white;
-      display: flex;
-      overflow-x: auto;
-      padding: 10px;
-      gap: 12px;
-      border-bottom: 1px solid #ccc;
-    }
-
-    .userStory {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-width: 60px;
-    }
-
-    .storyAvatar {
-      width: 45px;
-      height: 45px;
-      border-radius: 50%;
-      background: #60a5fa;
-      color: white;
-      font-weight: bold;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      position: relative;
-    }
-
-    .activeDot {
-      position: absolute;
-      bottom: 0;
-      right: 0;
-      width: 10px;
-      height: 10px;
-      background: red;
-      border-radius: 50%;
-      border: 2px solid white;
-    }
-
-    #chatContainer {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-    }
-
-    #chatBox {
-      flex: 1;
-      overflow-y: auto;
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .message {
-      max-width: 70%;
-      margin-bottom: 10px;
-      padding: 10px;
-      border-radius: 10px;
-      font-size: 14px;
-    }
-
-    .my-message {
-      background: #1e40af;
-      color: white;
-      align-self: flex-end;
-    }
-
-    .other-message {
-      background: #e2e8f0;
-      align-self: flex-start;
-    }
-
-    #chatForm {
-      display: flex;
-      padding: 10px;
-      gap: 5px;
-      background: white;
-      border-top: 1px solid #ccc;
-    }
-
-    #messageInput {
-      flex: 1;
-      padding: 10px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-
-    #sendBtn, #imageBtn {
-      background: #1e40af;
-      border: none;
-      color: white;
-      border-radius: 6px;
-      padding: 0 15px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    #imageInput {
-      display: none;
-    }
-
-    @media (max-width: 600px) {
-      .storyAvatar {
-        width: 40px;
-        height: 40px;
-        font-size: 16px;
-      }
-    }
+    body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; background: #f1f5f9; }
+    .login-box { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 90%; max-width: 400px; }
+    input, button { width: 100%; padding: 10px; margin: 10px 0; font-size: 16px; }
   </style>
 </head>
 <body>
-  <div id="topBar">Messenger</div>
-  <div id="userScrollBar" id="userBar"></div>
-
-  <div id="chatContainer">
-    <div id="chatBox"></div>
-    <form id="chatForm">
-      <input type="text" id="messageInput" placeholder="Type a message...">
-      <label for="imageInput" id="imageBtn">📎</label>
-      <input type="file" id="imageInput" accept="image/*">
-      <button id="sendBtn">➤</button>
-    </form>
-  </div>
-
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="/script.js"></script>
-  <script src="/notify.js"></script>
-</body>
+  <div class="login-box">
+    <h2>Pakhiiiiiiiiiiiii 🐦</h2>
+    <input type="text" id="username" placeholder="Enter your name" required />
+    <input type="password" id="password" placeholder="Password (uss)" required />
+    <input type="file" id="profilePic" accept="image/*" />
+    <button onclick="login()">Login</button>
+  </div>  <script>
+    function login() {
+      const name = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      if (!name || password !== 'uss') return alert('Invalid Credentials');
+      localStorage.setItem('username', name);
+      const file = document.getElementById('profilePic').files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          localStorage.setItem('profilePic', e.target.result);
+          window.location.href = 'index.html';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const defaults = ["/default1.png", "/default2.png"];
+        const randomPic = defaults[Math.floor(Math.random() * 2)];
+        localStorage.setItem('profilePic', randomPic);
+        window.location.href = 'index.html';
+      }
+    }
+  </script></body>
 </html>
