@@ -1,1 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Group Chat - Pakhiiiiiiiiiiiii 🐦</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f1f5f9;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
 
+    header {
+      background: #1e40af;
+      color: white;
+      padding: 12px;
+      text-align: center;
+      font-size: 18px;
+    }
+
+    #chatBox {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .message {
+      max-width: 70%;
+      padding: 8px 12px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      word-wrap: break-word;
+      font-size: 15px;
+    }
+
+    .my-message {
+      background: #60a5fa;
+      color: white;
+      margin-left: auto;
+      text-align: right;
+    }
+
+    .other-message {
+      background: #e2e8f0;
+      color: black;
+      margin-right: auto;
+    }
+
+    .name {
+      font-size: 12px;
+      font-weight: bold;
+      margin-bottom: 3px;
+    }
+
+    .timestamp {
+      font-size: 10px;
+      color: gray;
+      text-align: right;
+      margin-top: 3px;
+    }
+
+    #typing {
+      font-size: 12px;
+      padding: 5px 10px;
+      color: gray;
+    }
+
+    #chatForm {
+      display: flex;
+      gap: 5px;
+      padding: 10px;
+      background: white;
+    }
+
+    #messageInput {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 15px;
+    }
+
+    #sendBtn, #imageBtn {
+      background: #1e40af;
+      color: white;
+      border: none;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #imageInput {
+      display: none;
+    }
+
+    img.chat-image {
+      max-width: 200px;
+      margin-top: 5px;
+      border-radius: 6px;
+    }
+
+    @media screen and (max-width: 480px) {
+      #messageInput {
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header id="groupHeader">🔒 Group: Loading...</header>
+
+  <div id="chatBox"></div>
+  <div id="typing"></div>
+
+  <form id="chatForm">
+    <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off" />
+    <label for="imageInput" id="imageBtn">📎</label>
+    <input type="file" id="imageInput" accept="image/*" />
+    <button type="submit" id="sendBtn">➤</button>
+  </form>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    const chatBox = document.getElementById('chatBox');
+    const messageInput = document.getElementById('messageInput');
+    const chatForm = document.getElementById('chatForm');
+    const typingDiv = document.getElementById('typing');
+    const groupHeader = document.getElementById('groupHeader');
+    const imageInput = document.getElementById('imageInput');
+
+    const currentUser = JSON.parse(localStorage.getItem('user'));
+    const group = JSON.parse(localStorage.getItem('currentGroup'));
+
+    if (!currentUser || !group) {
+      alert("Unauthorized access. Login or select group first.");
+      window.location.href = "index.html";
+    }
+
+    groupHeader.textContent = `🔒 Group: ${group.groupName}`;
+
+    socket.emit('join-group', group.groupName, currentUser.name);
+
+    socket.on('group-message', (msg) => {
+      addMessage(msg);
+    });
+
+    socket.on('group-typing', (name) => {
+      if (name !== currentUser.name) {
+        typingDiv.textContent = `${name} is typing...`;
+        setTimeout(() => {
+          typingDiv.textContent = '';
+        }, 1500);
+      }
+    });
+
+    chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = messageInput.value.trim();
+      if (!text) return;
+      const msg = {
+        sender: currentUser.name,
+        content: text,
+        time: new Date().toLocaleTimeString(),
+        type: 'text',
+        group: group.groupName,
+      };
+      socket.emit('send-group-message', msg);
+      addMessage(msg, true);
+      messageInput.value = '';
+    });
+
+    messageInput.addEventListener('input', () => {
+      socket.emit('typing-group', { group: group.groupName, name: currentUser.name });
+    });
+
+    imageInput.addEventListener('change', () => {
+      const file = imageInput.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const msg = {
+          sender: currentUser.name,
+          content: reader.result,
+          time: new Date().toLocaleTimeString(),
+          type: 'image',
+          group: group.groupName,
+        };
+        socket.emit('send-group-message', msg);
+        addMessage(msg, true);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function addMessage(msg, self = false) {
+      const div = document.createElement('div');
+      div.className = 'message ' + (msg.sender === currentUser.name || self ? 'my-message' : 'other-message');
+      let innerHTML = `<div class="name">${msg.sender}</div>`;
+
+      if (msg.type === 'image') {
+        innerHTML += `<img src="${msg.content}" class="chat-image" />`;
+      } else {
+        innerHTML += msg.content;
+      }
+
+      innerHTML += `<div class="timestamp">${msg.time}</div>`;
+      div.innerHTML = innerHTML;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  </script>
+</body>
+</html>
