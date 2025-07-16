@@ -2,41 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Group Chat - Pakhiiiiiiiiiiiii 🐦</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Group Chat | Pakhiiiiiiiiiiiii 🐦</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
+    * {
+      box-sizing: border-box;
+    }
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: #f1f5f9;
       display: flex;
       flex-direction: column;
       height: 100vh;
+      background: #f1f5f9;
     }
 
     header {
       background: #1e40af;
       color: white;
-      padding: 12px;
-      text-align: center;
+      padding: 15px;
       font-size: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header button {
+      background: transparent;
+      color: white;
+      font-size: 18px;
+      border: none;
+      cursor: pointer;
     }
 
     #chatBox {
       flex: 1;
-      padding: 10px;
       overflow-y: auto;
+      padding: 10px;
       display: flex;
       flex-direction: column;
     }
 
     .message {
-      max-width: 70%;
+      max-width: 75%;
       padding: 8px 12px;
       border-radius: 10px;
       margin-bottom: 10px;
       word-wrap: break-word;
-      font-size: 15px;
+      font-size: 14px;
     }
 
     .my-message {
@@ -52,47 +65,48 @@
       margin-right: auto;
     }
 
-    .name {
-      font-size: 12px;
+    .sender {
       font-weight: bold;
-      margin-bottom: 3px;
+      font-size: 11px;
+      margin-bottom: 2px;
     }
 
     .timestamp {
       font-size: 10px;
       color: gray;
-      text-align: right;
-      margin-top: 3px;
+      margin-top: 2px;
     }
 
     #typing {
       font-size: 12px;
-      padding: 5px 10px;
-      color: gray;
+      color: #4b5563;
+      padding: 0 10px;
+      height: 20px;
     }
 
     #chatForm {
       display: flex;
-      gap: 5px;
       padding: 10px;
+      gap: 5px;
       background: white;
+      border-top: 1px solid #ccc;
     }
 
     #messageInput {
       flex: 1;
       padding: 10px;
+      font-size: 15px;
       border: 1px solid #ccc;
       border-radius: 8px;
-      font-size: 15px;
     }
 
     #sendBtn, #imageBtn {
+      padding: 10px 12px;
       background: #1e40af;
       color: white;
       border: none;
-      padding: 10px 12px;
       border-radius: 8px;
-      font-size: 16px;
+      font-size: 18px;
       cursor: pointer;
     }
 
@@ -100,22 +114,19 @@
       display: none;
     }
 
-    img.chat-image {
+    img.chat-img {
       max-width: 200px;
+      border-radius: 8px;
       margin-top: 5px;
-      border-radius: 6px;
-    }
-
-    @media screen and (max-width: 480px) {
-      #messageInput {
-        font-size: 14px;
-      }
     }
   </style>
 </head>
 <body>
 
-  <header id="groupHeader">🔒 Group: Loading...</header>
+  <header>
+    <span id="groupName">Group Chat</span>
+    <button onclick="window.location.href='index.html'">⬅</button>
+  </header>
 
   <div id="chatBox"></div>
   <div id="typing"></div>
@@ -130,91 +141,84 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
-
     const chatBox = document.getElementById('chatBox');
-    const messageInput = document.getElementById('messageInput');
-    const chatForm = document.getElementById('chatForm');
-    const typingDiv = document.getElementById('typing');
-    const groupHeader = document.getElementById('groupHeader');
+    const form = document.getElementById('chatForm');
+    const input = document.getElementById('messageInput');
     const imageInput = document.getElementById('imageInput');
+    const groupName = new URLSearchParams(location.search).get("group");
+    const typingDiv = document.getElementById("typing");
 
-    const currentUser = JSON.parse(localStorage.getItem('user'));
-    const group = JSON.parse(localStorage.getItem('currentGroup'));
+    let user = JSON.parse(localStorage.getItem("user")) || { name: "Unknown" };
+    document.getElementById("groupName").innerText = groupName || "Group Chat";
 
-    if (!currentUser || !group) {
-      alert("Unauthorized access. Login or select group first.");
-      window.location.href = "index.html";
-    }
+    // Join group room
+    socket.emit("joinGroup", { group: groupName, user });
 
-    groupHeader.textContent = `🔒 Group: ${group.groupName}`;
-
-    socket.emit('join-group', group.groupName, currentUser.name);
-
-    socket.on('group-message', (msg) => {
-      addMessage(msg);
+    // Load chat history
+    socket.on("groupHistory", (messages) => {
+      chatBox.innerHTML = "";
+      messages.forEach(displayMessage);
     });
 
-    socket.on('group-typing', (name) => {
-      if (name !== currentUser.name) {
-        typingDiv.textContent = `${name} is typing...`;
-        setTimeout(() => {
-          typingDiv.textContent = '';
-        }, 1500);
-      }
+    // Receive message
+    socket.on("groupMessage", displayMessage);
+
+    // Typing indicator
+    input.addEventListener("input", () => {
+      socket.emit("typing", { group: groupName, user: user.name });
     });
 
-    chatForm.addEventListener('submit', (e) => {
+    socket.on("typing", (name) => {
+      typingDiv.innerText = `${name} is typing...`;
+      clearTimeout(window.typingTimer);
+      window.typingTimer = setTimeout(() => {
+        typingDiv.innerText = "";
+      }, 1000);
+    });
+
+    // Send message
+    form.onsubmit = (e) => {
       e.preventDefault();
-      const text = messageInput.value.trim();
+      const text = input.value.trim();
       if (!text) return;
-      const msg = {
-        sender: currentUser.name,
-        content: text,
-        time: new Date().toLocaleTimeString(),
-        type: 'text',
-        group: group.groupName,
+      const data = {
+        group: groupName,
+        sender: user.name,
+        profile: user.profile,
+        message: text,
+        time: new Date().toLocaleTimeString()
       };
-      socket.emit('send-group-message', msg);
-      addMessage(msg, true);
-      messageInput.value = '';
-    });
+      socket.emit("groupMessage", data);
+      input.value = "";
+    };
 
-    messageInput.addEventListener('input', () => {
-      socket.emit('typing-group', { group: group.groupName, name: currentUser.name });
-    });
-
-    imageInput.addEventListener('change', () => {
+    // Image sending
+    imageInput.onchange = () => {
       const file = imageInput.files[0];
       if (!file) return;
-
       const reader = new FileReader();
       reader.onload = () => {
-        const msg = {
-          sender: currentUser.name,
-          content: reader.result,
-          time: new Date().toLocaleTimeString(),
-          type: 'image',
-          group: group.groupName,
-        };
-        socket.emit('send-group-message', msg);
-        addMessage(msg, true);
+        socket.emit("groupMessage", {
+          group: groupName,
+          sender: user.name,
+          profile: user.profile,
+          message: null,
+          image: reader.result,
+          time: new Date().toLocaleTimeString()
+        });
       };
       reader.readAsDataURL(file);
-    });
+    };
 
-    function addMessage(msg, self = false) {
-      const div = document.createElement('div');
-      div.className = 'message ' + (msg.sender === currentUser.name || self ? 'my-message' : 'other-message');
-      let innerHTML = `<div class="name">${msg.sender}</div>`;
-
-      if (msg.type === 'image') {
-        innerHTML += `<img src="${msg.content}" class="chat-image" />`;
-      } else {
-        innerHTML += msg.content;
-      }
-
-      innerHTML += `<div class="timestamp">${msg.time}</div>`;
-      div.innerHTML = innerHTML;
+    function displayMessage({ sender, message, image, time }) {
+      const div = document.createElement("div");
+      div.className = "message " + (sender === user.name ? "my-message" : "other-message");
+      div.innerHTML = `
+        <div class="sender">${sender}</div>
+        ${message ? `<div>${message}</div>` : ""}
+        ${image ? `<img class="chat-img" src="${image}" />` : ""}
+        <div class="timestamp">${time}</div>
+      `;
       chatBox.appendChild(div);
       chatBox.scrollTop = chatBox.scrollHeight;
     }
