@@ -118,6 +118,14 @@
       if (profilePic.includes("default1") || profilePic.includes("default2")) {
         profilePic = defaultPics[Math.floor(Math.random() * 2)];
       }
+      const userData = {
+  name: enteredName,
+  pic: selectedPic,
+  timestamp: Date.now()
+};
+
+localStorage.setItem("user", JSON.stringify(userData));
+window.location.href = "/index.html";
 
       const user = {
         name,
