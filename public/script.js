@@ -1,73 +1,28 @@
 // script.js
 
-const socket = io();
+const socket = io(); let user = JSON.parse(localStorage.getItem("user")) || null;
 
-// DOM References
-const loginPage = document.getElementById("loginPage");
-const chatPage = document.getElementById("chatPage");
-const userScroll = document.getElementById("userScroll");
-const chatList = document.getElementById("chatList");
+const loginTimeout = 24 * 60 * 60 * 1000; // 24 ঘন্টা const now = Date.now();
 
-let currentUser = JSON.parse(localStorage.getItem("user"));
+if (!user || now - (user.timestamp || 0) > loginTimeout) { window.location.href = "/login.html"; } else { document.addEventListener("DOMContentLoaded", () => { initChat(); }); }
 
-// Redirect to login if not logged in
-if (!currentUser) {
-  window.location.href = "/login.html";
-} else {
-  socket.emit("login", currentUser, res => {
-    if (!res.success) {
-      alert("Username already taken. Choose another.");
-      localStorage.removeItem("user");
-      window.location.href = "/login.html";
-    }
-  });
-}
+function initChat() { const chatBox = document.getElementById("chatBox"); const chatForm = document.getElementById("chatForm"); const messageInput = document.getElementById("messageInput"); const imageInput = document.getElementById("imageInput");
 
-// Handle updated user list
-socket.on("user-list", users => {
-  userScroll.innerHTML = "";
-  users.forEach(u => {
-    const div = document.createElement("div");
-    div.className = "userCircle";
-    div.innerHTML = `
-      <div class="avatar">
-        ${u.pic ? `<img src="${u.pic}" />` : u.name.charAt(0).toUpperCase()}
-      </div>
-      <small>${u.name}</small>
-    `;
-    if (u.name === currentUser.name) {
-      div.querySelector("small").innerText += " (You)";
-    }
-    div.onclick = () => {
-      startPrivate(u.name);
-    };
-    userScroll.appendChild(div);
-  });
-});
+socket.emit("user-join", user);
 
-// Start private chat
-function startPrivate(name) {
-  localStorage.setItem("privateWith", JSON.stringify({ name }));
-  window.location.href = "/private-chat.html";
-}
+chatForm.addEventListener("submit", (e) => { e.preventDefault(); const message = messageInput.value.trim(); if (message) { const msgData = { sender: user.name, avatar: user.avatar, message, timestamp: new Date().toLocaleTimeString(), type: "text", }; socket.emit("groupMessage", msgData); messageInput.value = ""; displayMessage(msgData, true); } });
 
-// Group create action
-document.getElementById("createGroupBtn").onclick = () => {
-  window.location.href = "/group-create.html";
-};
+imageInput.addEventListener("change", () => { const file = imageInput.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { const msgData = { sender: user.name, avatar: user.avatar, message: reader.result, timestamp: new Date().toLocaleTimeString(), type: "image", }; socket.emit("groupMessage", msgData); displayMessage(msgData, true); }; reader.readAsDataURL(file); });
 
-// Add recent chats example (extend with real storage later)
-const chats = JSON.parse(localStorage.getItem("recentChats") || "[]");
-chats.forEach(c => {
-  const div = document.createElement("div");
-  div.className = "chat-user";
-  div.onclick = () => {
-    const target = c.type === "group" ? "/group-chat.html" : "/private-chat.html";
-    localStorage.setItem(c.type === "group" ? "currentGroup" : "privateWith", JSON.stringify({
-      name: c.name
-    }));
-    window.location.href = target;
-  };
-  div.innerHTML = `<span>${c.name}</span>`;
-  chatList.appendChild(div);
-});
+socket.on("groupMessage", (msg) => { if (msg.sender !== user.name) { playNotify(msg.sender); displayMessage(msg, false); } });
+
+function displayMessage(data, isMine) { const msgDiv = document.createElement("div"); msgDiv.className = message ${isMine ? "my-message" : "other-message"}; if (data.type === "text") { msgDiv.innerHTML = <div class='name'>${data.sender} <small>${data.timestamp}</small></div>${data.message}; } else if (data.type === "image") { msgDiv.innerHTML = <div class='name'>${data.sender} <small>${data.timestamp}</small></div><img src='${data.message}' style='max-width: 100%; border-radius: 8px;' />; } chatBox.appendChild(msgDiv); chatBox.scrollTop = chatBox.scrollHeight; }
+
+// টাইপিং ইন্ডিকেটর messageInput.addEventListener("input", () => { socket.emit("typing", user.name); });
+
+socket.on("typing", (name) => { const typing = document.getElementById("typing") || document.createElement("div"); typing.id = "typing"; typing.textContent = ${name} is typing...; typing.style.fontSize = "13px"; typing.style.color = "gray"; chatBox.appendChild(typing); setTimeout(() => typing.remove(), 3000); }); }
+
+// 3 letter টাইপ করলে নাম সাজেশন const nameInput = document.getElementById("nameInput"); if (nameInput) { nameInput.addEventListener("input", () => { const val = nameInput.value; if (val.length >= 3) { const saved = JSON.parse(localStorage.getItem("userList")) || []; const matched = saved.find((u) => u.name.startsWith(val)); if (matched) { nameInput.value = matched.name; } } }); }
+
+// ইউজার লগইন সেভ function saveLogin(userData) { userData.timestamp = Date.now(); localStorage.setItem("user", JSON.stringify(userData)); let list = JSON.parse(localStorage.getItem("userList")) || []; if (!list.find((u) => u.name === userData.name)) { list.push({ name: userData.name }); localStorage.setItem("userList", JSON.stringify(list)); } }
+
