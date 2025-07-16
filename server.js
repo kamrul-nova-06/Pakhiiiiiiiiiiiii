@@ -1,134 +1,97 @@
-const express = require('express');
-const http = require('http');
-const path = require('path');
-const mime = require('mime-types');
-const { Server } = require('socket.io');
-const { v4: uuidv4 } = require('uuid');
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const cors = require("cors");
+const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const PORT = process.env.PORT || 3000;
+app.use(cors());
+app.use(express.static(path.join(__dirname, "public")));
 
-// Serve static files (html, css, js, images)
-app.use(express.static(path.join(__dirname, 'public')));
-
-// In-memory data store
-let users = {};           // { socketId: { name, pic, active, lastSeen } }
-let usernames = {};       // { name: socketId }
-let messages = {
-  group: []               // [{ sender, content, type, timestamp }]
+const users = {}; // socketId => userObj
+const nameToSocket = {}; // name => socketId
+const messages = {
+  group: [],
+  private: {}, // roomId => [msg]
 };
-let privateChats = {};    // { name1_name2: [messages] }
 
-// Routes
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+const adminPassword = "admin123"; // change if needed
 
-// Socket.io logic
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+io.on("connection", (socket) => {
+  const ip = socket.handshake.address;
 
-  socket.on('login', ({ name, pic }) => {
-    // Check duplicate username
-    if (Object.values(users).find(u => u.name === name)) {
-      socket.emit('name-taken');
-      return;
+  socket.on("login", (user, callback) => {
+    if (Object.values(users).some((u) => u.name === user.name)) {
+      return callback({ success: false });
     }
 
-    users[socket.id] = {
-      name,
-      pic,
-      active: true,
-      lastSeen: new Date()
-    };
-
-    usernames[name] = socket.id;
-
-    // Join group room
-    socket.join('group');
-
-    // Send chat history
-    socket.emit('chat-history', messages.group);
-
-    // Update user list to all
-    io.emit('user-list', getAllUsers());
-
-    console.log(`${name} logged in`);
+    users[socket.id] = { ...user, ip };
+    nameToSocket[user.name] = socket.id;
+    io.emit("user-list", Object.values(users));
+    callback({ success: true });
   });
 
-  socket.on('send-message', (msg) => {
-    const user = users[socket.id];
-    if (!user) return;
+  socket.on("get-users", () => {
+    socket.emit("user-list", Object.values(users));
+  });
 
-    const data = {
-      sender: user.name,
-      content: msg.content,
-      type: msg.type || 'text',
-      timestamp: new Date().toLocaleTimeString()
-    };
+  socket.on("send-group-message", (msg) => {
+    messages.group.push(msg);
+    io.emit("group-message", msg);
+  });
 
-    if (msg.to === 'group') {
-      messages.group.push(data);
-      io.to('group').emit('new-message', data);
+  socket.on("join-private", (roomId) => {
+    socket.join(roomId);
+    if (!messages.private[roomId]) messages.private[roomId] = [];
+    socket.emit("chat-history", messages.private[roomId]);
+  });
+
+  socket.on("send-private-message", (msg) => {
+    const roomId = msg.room;
+    if (!messages.private[roomId]) messages.private[roomId] = [];
+    messages.private[roomId].push(msg);
+    io.to(roomId).emit("private-message", msg);
+  });
+
+  socket.on("typing-group", (name) => {
+    socket.broadcast.emit("group-typing", name);
+  });
+
+  socket.on("typing-private", (data) => {
+    socket.to(data.room).emit("private-typing", data.name);
+  });
+
+  socket.on("admin-clear", (pass, callback) => {
+    if (pass === adminPassword) {
+      messages.group = [];
+      for (let key in messages.private) {
+        messages.private[key] = [];
+      }
+      callback("✅ All messages cleared by admin.");
     } else {
-      const targetId = usernames[msg.to];
-      if (!targetId) return;
-
-      const key = createPrivateKey(user.name, msg.to);
-      if (!privateChats[key]) privateChats[key] = [];
-      privateChats[key].push(data);
-
-      io.to(socket.id).emit('new-message', data);
-      io.to(targetId).emit('new-message', data);
+      callback("❌ Incorrect admin password.");
     }
   });
 
-  socket.on('typing', (to) => {
-    const user = users[socket.id];
-    if (!user) return;
-
-    if (to === 'group') {
-      socket.to('group').emit('typing', user.name);
-    } else {
-      const targetId = usernames[to];
-      if (targetId) io.to(targetId).emit('typing', user.name);
-    }
-  });
-
-  socket.on('get-private-chat', (withUser) => {
-    const me = users[socket.id];
-    const key = createPrivateKey(me.name, withUser);
-    const chat = privateChats[key] || [];
-    socket.emit('private-history', { withUser, chat });
-  });
-
-  socket.on('disconnect', () => {
+  socket.on("disconnect", () => {
     const user = users[socket.id];
     if (user) {
-      users[socket.id].active = false;
-      users[socket.id].lastSeen = new Date();
-      io.emit('user-list', getAllUsers());
-      console.log(user.name, 'disconnected');
+      delete nameToSocket[user.name];
     }
+    delete users[socket.id];
+    io.emit("user-list", Object.values(users));
   });
 });
 
-// Helper: get all user data
-function getAllUsers() {
-  return Object.values(users).map(u => ({
-    name: u.name,
-    pic: u.pic,
-    active: u.active
-  }));
-}
+// fallback for frontend routing (if SPA)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
-function createPrivateKey(name1, name2) {
-  return [name1, name2].sort().join('_');
-}
-
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log("Server running on port", PORT);
 });
