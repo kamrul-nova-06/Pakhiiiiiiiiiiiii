@@ -2,25 +2,72 @@
 
 const socket = io();
 
-// DOM elements const messageInput = document.getElementById("messageInput"); const sendBtn = document.getElementById("sendBtn"); const chatBox = document.getElementById("chatBox"); const imageInput = document.getElementById("imageInput"); const userList = document.getElementById("userList");
+// DOM References
+const loginPage = document.getElementById("loginPage");
+const chatPage = document.getElementById("chatPage");
+const userScroll = document.getElementById("userScroll");
+const chatList = document.getElementById("chatList");
 
-let currentUser = localStorage.getItem("chat_user"); let profilePic = localStorage.getItem("chat_pic"); let currentChat = "group"; // default let selectedUser = null;
+let currentUser = JSON.parse(localStorage.getItem("user"));
 
-if (!currentUser || !profilePic) { window.location.href = "/login.html"; }
+// Redirect to login if not logged in
+if (!currentUser) {
+  window.location.href = "/login.html";
+} else {
+  socket.emit("login", currentUser, res => {
+    if (!res.success) {
+      alert("Username already taken. Choose another.");
+      localStorage.removeItem("user");
+      window.location.href = "/login.html";
+    }
+  });
+}
 
-socket.emit("join", { name: currentUser, pic: profilePic });
+// Handle updated user list
+socket.on("user-list", users => {
+  userScroll.innerHTML = "";
+  users.forEach(u => {
+    const div = document.createElement("div");
+    div.className = "userCircle";
+    div.innerHTML = `
+      <div class="avatar">
+        ${u.pic ? `<img src="${u.pic}" />` : u.name.charAt(0).toUpperCase()}
+      </div>
+      <small>${u.name}</small>
+    `;
+    if (u.name === currentUser.name) {
+      div.querySelector("small").innerText += " (You)";
+    }
+    div.onclick = () => {
+      startPrivate(u.name);
+    };
+    userScroll.appendChild(div);
+  });
+});
 
-// Send Message sendBtn.addEventListener("click", (e) => { e.preventDefault(); const msg = messageInput.value.trim(); if (msg === "") return; socket.emit("message", { to: currentChat === "group" ? "group" : selectedUser, from: currentUser, text: msg, type: "text", pic: profilePic, time: new Date().toLocaleTimeString(), }); messageInput.value = ""; });
+// Start private chat
+function startPrivate(name) {
+  localStorage.setItem("privateWith", JSON.stringify({ name }));
+  window.location.href = "/private-chat.html";
+}
 
-// Typing messageInput.addEventListener("input", () => { socket.emit("typing", { to: currentChat === "group" ? "group" : selectedUser, from: currentUser, }); });
+// Group create action
+document.getElementById("createGroupBtn").onclick = () => {
+  window.location.href = "/group-create.html";
+};
 
-// Send Image imageInput.addEventListener("change", () => { const file = imageInput.files[0]; const reader = new FileReader(); reader.onload = () => { socket.emit("message", { to: currentChat === "group" ? "group" : selectedUser, from: currentUser, text: reader.result, type: "image", pic: profilePic, time: new Date().toLocaleTimeString(), }); }; reader.readAsDataURL(file); });
-
-// Receive Message socket.on("message", (data) => { const msg = document.createElement("div"); msg.className = message ${data.from === currentUser ? "my-message" : "other-message"}; msg.innerHTML = <div class="name">${data.from} • ${data.time}</div> ${data.type === "text" ? data.text :<img src='${data.text}' style='max-width:100%;border-radius:10px;' />} ; chatBox.appendChild(msg); chatBox.scrollTop = chatBox.scrollHeight;
-
-if (data.from !== currentUser) playNotifySound(); });
-
-// Typing Indicator socket.on("typing", (data) => { showTyping(data.from, currentChat); });
-
-// Load Online Users socket.on("users", (users) => { userList.innerHTML = ""; users.forEach((u) => { const el = document.createElement("div"); el.className = "user"; el.innerHTML = <div class="avatar">${u.pic ?<img src='${u.pic}' style='width:100%;height:100%;border-radius:50%;' />: u.name.charAt(0)}</div> <div>${u.name} ${u.active ? "<span style='color:red;'>●</span>" : ""}</div>; el.onclick = () => { currentChat = u.name; selectedUser = u.name; chatBox.innerHTML = ""; // optional: load history }; userList.appendChild(el); }); });
-
+// Add recent chats example (extend with real storage later)
+const chats = JSON.parse(localStorage.getItem("recentChats") || "[]");
+chats.forEach(c => {
+  const div = document.createElement("div");
+  div.className = "chat-user";
+  div.onclick = () => {
+    const target = c.type === "group" ? "/group-chat.html" : "/private-chat.html";
+    localStorage.setItem(c.type === "group" ? "currentGroup" : "privateWith", JSON.stringify({
+      name: c.name
+    }));
+    window.location.href = target;
+  };
+  div.innerHTML = `<span>${c.name}</span>`;
+  chatList.appendChild(div);
+});
