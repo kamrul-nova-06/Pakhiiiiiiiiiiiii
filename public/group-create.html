@@ -3,141 +3,152 @@
 <head>
   <meta charset="UTF-8" />
   <title>Create Group - Pakhiiiiiiiiiiiii 🐦</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: #f8fafc;
-      padding: 20px;
+      background: #f1f5f9;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
     }
 
-    h2 {
+    header {
+      background: #1e40af;
+      color: white;
+      padding: 15px;
       text-align: center;
-      color: #1e40af;
-    }
-
-    form {
-      max-width: 400px;
-      margin: auto;
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-
-    label {
-      display: block;
-      margin-top: 10px;
+      font-size: 18px;
       font-weight: bold;
     }
 
-    input[type="text"],
-    input[type="password"] {
-      width: 100%;
-      padding: 10px;
-      margin-top: 5px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-
-    .user-list {
-      margin-top: 15px;
-      max-height: 200px;
+    #userList {
+      flex: 1;
       overflow-y: auto;
-      border: 1px solid #ccc;
       padding: 10px;
-      border-radius: 6px;
     }
 
-    .user-list label {
-      font-weight: normal;
-      display: block;
-    }
-
-    button {
-      margin-top: 20px;
-      width: 100%;
-      background: #1e40af;
-      color: white;
+    .user {
+      background: white;
+      display: flex;
+      align-items: center;
+      gap: 10px;
       padding: 10px;
-      border: none;
+      margin-bottom: 8px;
       border-radius: 8px;
-      font-size: 16px;
+      border: 1px solid #ddd;
       cursor: pointer;
     }
 
-    button:hover {
-      background: #1c3faa;
+    .user img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
     }
 
-    .back-link {
-      text-align: center;
-      margin-top: 20px;
+    .user-name {
+      flex: 1;
+      font-weight: bold;
     }
 
-    .back-link a {
-      color: #1e40af;
-      text-decoration: none;
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: red;
+    }
+
+    form {
+      background: white;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border-top: 1px solid #ccc;
+    }
+
+    input, button {
+      padding: 10px;
+      font-size: 15px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background: #1e40af;
+      color: white;
+      cursor: pointer;
+    }
+
+    .selected {
+      background-color: #dbeafe;
     }
   </style>
 </head>
 <body>
 
-  <h2>🔒 Create New Group</h2>
+  <header>➕ Create New Group</header>
+
+  <div id="userList">
+    <!-- ইউজার লিস্ট ডায়নামিকভাবে আসবে -->
+  </div>
+
   <form id="createGroupForm">
-    <label for="groupName">Group Name</label>
-    <input type="text" id="groupName" required />
-
-    <label for="groupPassword">Group Password</label>
-    <input type="password" id="groupPassword" required />
-
-    <label>Select Members</label>
-    <div class="user-list" id="userList">
-      <!-- All available users will be loaded here via JS -->
-    </div>
-
+    <input type="text" id="groupName" placeholder="Group Name" required />
+    <input type="password" id="groupPassword" placeholder="Group Password" required />
     <button type="submit">Create Group</button>
   </form>
 
-  <div class="back-link">
-    <a href="index.html">← Back to Home</a>
-  </div>
-
+  <script src="/socket.io/socket.io.js"></script>
   <script>
-    // Dummy user list — replace with socket response in real app
-    const users = JSON.parse(localStorage.getItem('allUsers')) || [];
+    const socket = io();
+    const userList = document.getElementById("userList");
+    const selectedUsers = new Set();
 
-    const userListDiv = document.getElementById('userList');
-    users.forEach(user => {
-      const label = document.createElement('label');
-      label.innerHTML = `
-        <input type="checkbox" name="members" value="${user.name}" />
-        ${user.name}
-      `;
-      userListDiv.appendChild(label);
+    socket.emit("getAllUsers");
+
+    socket.on("userList", (users) => {
+      userList.innerHTML = "";
+      users.forEach(user => {
+        const div = document.createElement("div");
+        div.className = "user";
+        div.innerHTML = `
+          <img src="${user.profile || '/default1.png'}" />
+          <span class="user-name">${user.name}</span>
+          <span class="dot" style="visibility:${user.active ? 'visible' : 'hidden'}"></span>
+        `;
+        div.onclick = () => {
+          if (selectedUsers.has(user.name)) {
+            selectedUsers.delete(user.name);
+            div.classList.remove("selected");
+          } else {
+            selectedUsers.add(user.name);
+            div.classList.add("selected");
+          }
+        };
+        userList.appendChild(div);
+      });
     });
 
-    document.getElementById('createGroupForm').addEventListener('submit', (e) => {
+    document.getElementById("createGroupForm").onsubmit = (e) => {
       e.preventDefault();
-      const groupName = document.getElementById('groupName').value.trim();
-      const groupPassword = document.getElementById('groupPassword').value.trim();
-      const selected = [...document.querySelectorAll('input[name="members"]:checked')].map(el => el.value);
-
-      if (!groupName || !groupPassword || selected.length === 0) {
-        alert('Please fill all fields and select members.');
+      const name = document.getElementById("groupName").value.trim();
+      const password = document.getElementById("groupPassword").value.trim();
+      if (!name || !password || selectedUsers.size < 2) {
+        alert("Minimum 2 users & valid info needed");
         return;
       }
+      socket.emit("createGroup", {
+        name,
+        password,
+        members: Array.from(selectedUsers)
+      });
+    };
 
-      // Save group to localStorage or send to server
-      const groups = JSON.parse(localStorage.getItem('groups') || '[]');
-      groups.push({ groupName, groupPassword, members: selected });
-      localStorage.setItem('groups', JSON.stringify(groups));
-
-      alert('Group created successfully!');
-      window.location.href = "index.html";
+    socket.on("groupCreated", (groupId) => {
+      location.href = `/group-chat.html?group=${groupId}`;
     });
   </script>
-
 </body>
-  </html>
+</html>
