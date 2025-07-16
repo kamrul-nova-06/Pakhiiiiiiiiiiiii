@@ -2,177 +2,199 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Pakhiiiiiiiiiiiii 🐦</title>
+  <title>Messenger | Pakhiiiiiiiiiiiii 🐦</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="/manifest.json" />
   <style>
-    body, html {
+    * {
+      box-sizing: border-box;
+    }
+    html, body {
       margin: 0;
       padding: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: #f0f2f5;
+      background: #f1f5f9;
       height: 100vh;
+      overflow: hidden;
     }
-
-    header {
-      background: #0084ff;
-      color: white;
-      padding: 10px 15px;
+    body {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
     }
-    .imgBtn {
-  font-size: 20px;
-  margin-right: 10px;
-  cursor: pointer;
-}
-.message img {
-  max-width: 200px;
-  margin-top: 5px;
-  border-radius: 8px;
-    }
-
-    header h1 {
-      font-size: 18px;
-      margin: 0;
-    }
-
-    .chat-container {
+    #sidebar {
+      width: 80px;
+      background: #1e293b;
+      color: white;
       display: flex;
       flex-direction: column;
-      height: calc(100vh - 100px);
+      align-items: center;
+      padding-top: 10px;
     }
-
-    #userBar {
-      background: white;
-      padding: 10px;
-      overflow-x: auto;
-      display: flex;
-      border-bottom: 1px solid #ddd;
+    #groupBtn {
+      margin: 10px 0;
+      padding: 6px;
+      background: #0f172a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      width: 90%;
+      cursor: pointer;
     }
-
+    #userList {
+      flex: 1;
+      overflow-y: auto;
+      width: 100%;
+    }
     .user {
-      margin-right: 10px;
       text-align: center;
+      padding: 10px 0;
+      cursor: pointer;
+    }
+    .avatar {
+      background: #60a5fa;
+      width: 35px;
+      height: 35px;
+      margin: auto;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 16px;
       position: relative;
     }
-
-    .user .dot {
-      position: absolute;
-      top: 0;
-      right: 0;
+    .dot {
       width: 8px;
       height: 8px;
-      background: red;
       border-radius: 50%;
+      background: red;
+      position: absolute;
+      top: -1px;
+      right: -1px;
     }
-
-    #messages {
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    #chatHeader {
+      background: #1e40af;
+      color: white;
+      padding: 12px;
+      font-size: 18px;
+      text-align: center;
+    }
+    #userScrollBar {
+      display: flex;
+      overflow-x: auto;
+      padding: 6px;
+      background: #e2e8f0;
+      gap: 10px;
+    }
+    .userScrollItem {
+      min-width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      background: #3b82f6;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+      color: white;
+      font-size: 16px;
+    }
+    #chatBox {
       flex: 1;
       padding: 10px;
       overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
-
     .message {
-      max-width: 70%;
-      margin: 5px 0;
-      padding: 10px;
+      max-width: 75%;
+      padding: 8px 12px;
       border-radius: 10px;
-      clear: both;
+      margin-bottom: 10px;
+      font-size: 15px;
+      word-wrap: break-word;
     }
-
-    .self {
-      background: #dcf8c6;
-      float: right;
+    .my-message {
+      background: #60a5fa;
+      color: white;
+      margin-left: auto;
+      text-align: right;
     }
-
-    .other {
-      background: white;
-      float: left;
+    .other-message {
+      background: #e2e8f0;
+      color: black;
+      margin-right: auto;
     }
-
-    #chatInput {
+    .name {
+      font-size: 11px;
+      font-weight: bold;
+      margin-bottom: 3px;
+    }
+    #chatForm {
       display: flex;
       padding: 10px;
+      gap: 5px;
       background: white;
-      border-top: 1px solid #ccc;
     }
-
-    #chatInput input {
+    #messageInput {
       flex: 1;
       padding: 10px;
-      border-radius: 20px;
       border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 15px;
     }
-
-    #chatInput button {
-      margin-left: 10px;
-      padding: 10px 15px;
-      border: none;
-      border-radius: 20px;
-      background: #0084ff;
+    #sendBtn, #imageBtn {
+      background: #1e40af;
       color: white;
+      border: none;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 18px;
       cursor: pointer;
     }
-
-    footer {
-      height: 40px;
-      background: #eee;
-      text-align: center;
-      padding: 8px;
-      font-size: 14px;
+    #imageInput {
+      display: none;
     }
-
-    select {
-      margin-left: 10px;
-      padding: 5px;
-      border-radius: 5px;
+    @media screen and (max-width: 480px) {
+      #sidebar {
+        width: 60px;
+      }
+      .avatar {
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
+      }
+      #main {
+        margin-left: 60px;
+      }
     }
-
   </style>
 </head>
 <body>
-  <header>
-    <h1>Pakhiiiiiiiiiiiii 🐦</h1>
-    <div>
-      <span id="userName"></span>
-      <select id="modeSelect">
-        <option value="group">Group</option>
-      </select>
-    </div>
-  </header>
-
-  <div class="chat-container">
-    <div id="userBar"></div>
-    <div id="messages"></div>
-    <div id="chatInput">
-<form id="chatForm" onsubmit="return false">
-  <input type="file" id="imgInput" accept="image/*" hidden />
-  <label for="imgInput" class="imgBtn">📷</label>
-  <input type="text" id="msg" placeholder="Type your message..." />
-</form>
-      <button onclick="sendMessage()">Send</button>
-    </div>
+  <div id="sidebar">
+    <button id="groupBtn" onclick="openGroupChat()">🌐</button>
+    <div id="userList"></div>
+  </div>
+  <div id="main">
+    <div id="chatHeader">Messenger</div>
+    <div id="userScrollBar"></div>
+    <div id="chatBox"></div>
+    <form id="chatForm">
+      <input type="text" id="messageInput" placeholder="Type a message..." />
+      <label for="imageInput" id="imageBtn">📎</label>
+      <input type="file" id="imageInput" accept="image/*" />
+      <button type="submit" id="sendBtn">➤</button>
+    </form>
   </div>
 
-  <footer>
-
-    Pakhiiiiiiiiiiiii - Chat with ❤️
-    
-  </footer>
-
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/notify.js"></script>
   <script src="/script.js"></script>
-  <script>
-    fetch('/user-info')
-      .then(res => res.json())
-      .then(data => {
-        const name = data.name;
-        document.getElementById('userName').textContent = `👤 ${name}`;
-        window.userName = name;
-        socket.emit('register', name);
-      });
-  </script>
+  <script src="/notify.js"></script>
 </body>
 </html>
