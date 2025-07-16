@@ -116,7 +116,10 @@ io.on("connection", (socket) => {
       io.emit("private-message", { to, from, msg });
     }
   });
-
+socket.on("join", (username) => {
+  onlineUsers[socket.id] = username;
+  io.emit("user-list", Object.values(onlineUsers));
+});
   socket.on("disconnect", () => {
     const user = sockets[socket.id];
     if (users[user]) users[user].active = false;
