@@ -1,41 +1,28 @@
-// Notification sound
-const notifySound = new Audio("/notify.mp3");
+let user = JSON.parse(localStorage.getItem("user")) || {};
+let notificationSound = new Audio("/notify.mp3");
+notificationSound.volume = 0.5;
 
-function playNotifySound() {
-  // Play only if tab is visible and user didn't send the message
-  if (document.visibilityState === "visible") {
-    notifySound.play().catch(() => {});
+function playNotify(senderName) {
+  // নিজের নাম হলে সাউন্ড বাজবে না
+  if (!senderName || senderName === user.name) return;
+
+  // যদি ট্যাব মিনিমাইজ থাকে বা ইউজার অন্যখানে তাকায়
+  if (document.hidden || !document.hasFocus()) {
+    notificationSound.play().catch(() => {
+      // সাইলেন্টলি ব্যর্থ হলে কিছু করো না
+    });
+
+    // Desktop notification
+    if (Notification.permission === "granted") {
+      new Notification("📩 New Message from " + senderName, {
+        body: "Click to view",
+        icon: "/chat-icon.png"
+      });
+    }
   }
 }
 
-// Show typing indicator
-function showTyping(name, target = "group") {
-  const typingId = target === "group" ? "#groupTyping" : "#privateTyping";
-  let typingBox = document.querySelector(typingId);
-
-  if (!typingBox) {
-    typingBox = document.createElement("div");
-    typingBox.id = typingId.substring(1);
-    typingBox.style.fontSize = "13px";
-    typingBox.style.padding = "3px 12px";
-    typingBox.style.color = "#555";
-    typingBox.style.fontStyle = "italic";
-
-    const chatBox = document.getElementById("chatBox");
-    chatBox.appendChild(typingBox);
-  }
-
-  typingBox.textContent = `${name} is typing...`;
-
-  clearTimeout(typingBox.timeout);
-  typingBox.timeout = setTimeout(() => {
-    typingBox.textContent = "";
-  }, 2000);
+// নোটিফিকেশন পারমিশন একবারে নেবে
+if ("Notification" in window && Notification.permission !== "granted") {
+  Notification.requestPermission();
 }
-
-// Document visibility check
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") {
-    // Optional: clear notifications
-  }
-});
