@@ -19,7 +19,17 @@ socket.on("groupMessage", (msg) => { if (msg.sender !== user.name) { playNotify(
 function displayMessage(data, isMine) { const msgDiv = document.createElement("div"); msgDiv.className = message ${isMine ? "my-message" : "other-message"}; if (data.type === "text") { msgDiv.innerHTML = <div class='name'>${data.sender} <small>${data.timestamp}</small></div>${data.message}; } else if (data.type === "image") { msgDiv.innerHTML = <div class='name'>${data.sender} <small>${data.timestamp}</small></div><img src='${data.message}' style='max-width: 100%; border-radius: 8px;' />; } chatBox.appendChild(msgDiv); chatBox.scrollTop = chatBox.scrollHeight; }
 
 // টাইপিং ইন্ডিকেটর messageInput.addEventListener("input", () => { socket.emit("typing", user.name); });
+socket.on("user-list", (list) => {
+  const userList = document.getElementById("userList");
+  userList.innerHTML = "";
 
+  list.forEach((name) => {
+    const div = document.createElement("div");
+    div.className = "user";
+    div.innerText = name;
+    userList.appendChild(div);
+  });
+});
 socket.on("typing", (name) => { const typing = document.getElementById("typing") || document.createElement("div"); typing.id = "typing"; typing.textContent = ${name} is typing...; typing.style.fontSize = "13px"; typing.style.color = "gray"; chatBox.appendChild(typing); setTimeout(() => typing.remove(), 3000); }); }
 
 // 3 letter টাইপ করলে নাম সাজেশন const nameInput = document.getElementById("nameInput"); if (nameInput) { nameInput.addEventListener("input", () => { const val = nameInput.value; if (val.length >= 3) { const saved = JSON.parse(localStorage.getItem("userList")) || []; const matched = saved.find((u) => u.name.startsWith(val)); if (matched) { nameInput.value = matched.name; } } }); }
