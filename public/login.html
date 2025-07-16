@@ -2,95 +2,161 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Login - Pakhiiiiiiiiiiiii 🐦</title>
+  <title>Messenger | Pakhiiiiiiiiiiiii 🐦</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <style>
-    body {
+    * {
+      box-sizing: border-box;
+    }
+    body, html {
       margin: 0;
       padding: 0;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #007bff, #00d4ff);
+      font-family: 'Segoe UI', sans-serif;
+      background: #f1f5f9;
       height: 100vh;
+      overflow: hidden;
       display: flex;
-      justify-content: center;
-      align-items: center;
+      flex-direction: column;
     }
-    .login-box {
-      background: white;
-      padding: 30px 25px;
-      border-radius: 10px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.2);
-      width: 300px;
-    }
-    .login-box h2 {
-      color: #007bff;
+
+    #topBar {
+      background: #1e40af;
+      color: white;
+      padding: 10px 15px;
+      font-size: 20px;
+      font-weight: bold;
       text-align: center;
-      margin-bottom: 20px;
     }
-    .login-box input {
-      width: 100%;
-      padding: 12px;
-      margin-bottom: 15px;
+
+    #userScrollBar {
+      background: white;
+      display: flex;
+      overflow-x: auto;
+      padding: 10px;
+      gap: 12px;
+      border-bottom: 1px solid #ccc;
+    }
+
+    .userStory {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 60px;
+    }
+
+    .storyAvatar {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      background: #60a5fa;
+      color: white;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      position: relative;
+    }
+
+    .activeDot {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 10px;
+      height: 10px;
+      background: red;
+      border-radius: 50%;
+      border: 2px solid white;
+    }
+
+    #chatContainer {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    #chatBox {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .message {
+      max-width: 70%;
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+
+    .my-message {
+      background: #1e40af;
+      color: white;
+      align-self: flex-end;
+    }
+
+    .other-message {
+      background: #e2e8f0;
+      align-self: flex-start;
+    }
+
+    #chatForm {
+      display: flex;
+      padding: 10px;
+      gap: 5px;
+      background: white;
+      border-top: 1px solid #ccc;
+    }
+
+    #messageInput {
+      flex: 1;
+      padding: 10px;
       border-radius: 6px;
       border: 1px solid #ccc;
-      font-size: 1rem;
     }
-    .login-box button {
-      width: 100%;
-      padding: 12px;
-      background: #007bff;
-      color: white;
+
+    #sendBtn, #imageBtn {
+      background: #1e40af;
       border: none;
-      font-size: 1rem;
+      color: white;
       border-radius: 6px;
+      padding: 0 15px;
+      font-size: 16px;
       cursor: pointer;
     }
-    .login-box button:hover {
-      background: #0056b3;
+
+    #imageInput {
+      display: none;
     }
-    #errorMsg {
-      text-align: center;
-      color: red;
-      font-size: 0.9rem;
-      height: 20px;
+
+    @media (max-width: 600px) {
+      .storyAvatar {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+      }
     }
   </style>
 </head>
 <body>
+  <div id="topBar">Messenger</div>
+  <div id="userScrollBar" id="userBar"></div>
 
-  <div class="login-box">
-    <h2>Pakhiiiiiiiiiiiii 🐦</h2>
-    <input type="text" id="nameInput" placeholder="Enter your name" />
-    <input type="password" id="passInput" placeholder="Password" />
-    <button onclick="login()">Login</button>
-    <div id="errorMsg"></div>
+  <div id="chatContainer">
+    <div id="chatBox"></div>
+    <form id="chatForm">
+      <input type="text" id="messageInput" placeholder="Type a message...">
+      <label for="imageInput" id="imageBtn">📎</label>
+      <input type="file" id="imageInput" accept="image/*">
+      <button id="sendBtn">➤</button>
+    </form>
   </div>
 
-  <script>
-    async function login() {
-      const name = document.getElementById('nameInput').value.trim();
-      const pass = document.getElementById('passInput').value.trim();
-      const error = document.getElementById('errorMsg');
-
-      if (!name || !pass) {
-        error.textContent = 'সব ফিল্ড পূরণ করুন';
-        return;
-      }
-
-      const res = await fetch('/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, pass })
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        window.location.href = '/';
-      } else {
-        error.textContent = 'Password ভুল';
-      }
-    }
-  </script>
-
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/script.js"></script>
+  <script src="/notify.js"></script>
 </body>
 </html>
