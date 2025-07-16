@@ -1,94 +1,30 @@
-const socket = io();
-let currentMode = 'group';
-let to = 'group';
+// ✅ script.js const socket = io();
 
-const msgBox = document.getElementById('msg');
-const messagesDiv = document.getElementById('messages');
-const modeSelect = document.getElementById('modeSelect');
+let username = localStorage.getItem("pakhi-username"); let profilePic = localStorage.getItem("pakhi-avatar"); let currentChat = "group"; let typingTimeout;
 
-function scrollToBottom() {
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
-}
+function initLogin() { if (username) { socket.emit("user-joined", { username, profilePic }); document.getElementById("loginPage").style.display = "none"; document.getElementById("chatPage").style.display = "flex"; } }
 
-function formatTime(timestamp) {
-  const date = new Date(timestamp);
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
+function loginSubmit() { const name = document.getElementById("nameInput").value.trim(); const pass = document.getElementById("passInput").value.trim(); const picInput = document.getElementById("picInput"); if (pass !== "uss") return alert("Wrong password!"); if (!name) return alert("Enter name!"); socket.emit("check-username", name, (isTaken, suggestion) => { if (isTaken) return alert(Name taken! Try ${suggestion}); username = name; profilePic = picInput.files[0] ? URL.createObjectURL(picInput.files[0]) : default${Math.floor(Math.random() * 2) + 1}.png; localStorage.setItem("pakhi-username", username); localStorage.setItem("pakhi-avatar", profilePic); socket.emit("user-joined", { username, profilePic }); document.getElementById("loginPage").style.display = "none"; document.getElementById("chatPage").style.display = "flex"; }); }
 
-function showMessage(msg) {
-  const div = document.createElement('div');
-  div.className = 'message';
-  div.classList.add(msg.from === window.userName ? 'self' : 'other');
-  div.innerHTML = `<b>${msg.from}</b><br>${msg.text}<br><small>${formatTime(msg.time)}</small>`;
-  messagesDiv.appendChild(div);
-  if (msg.from !== window.userName) playNotification();
-  scrollToBottom();
-}
+function sendMessage(e) { e.preventDefault(); const input = document.getElementById("messageInput"); const fileInput = document.getElementById("imageInput"); const message = input.value.trim(); if (!message && !fileInput.files.length) return; let fileData = null; if (fileInput.files.length) { const reader = new FileReader(); reader.onload = () => { fileData = reader.result; socket.emit("chat-message", { room: currentChat, message, username, file: fileData, profilePic, }); fileInput.value = ""; }; reader.readAsDataURL(fileInput.files[0]); } else { socket.emit("chat-message", { room: currentChat, message, username, file: null, profilePic, }); } input.value = ""; }
 
-function sendMessage() {
-  const text = msgBox.value.trim();
-  if (!text) return;
-  const msg = { from: window.userName, to, text };
-  socket.emit('chat message', msg);
-  msgBox.value = '';
-  showMessage(msg);
-}
+function appendMessage(data, isOwn) { const box = document.getElementById("chatBox"); const msg = document.createElement("div"); msg.className = message ${isOwn ? "my-message" : "other-message"}; msg.innerHTML = <div class="name">${data.username} • ${data.time}</div>; if (data.file) { msg.innerHTML += <img src="${data.file}" style="max-width:100%; border-radius:8px" /><br/>; } msg.innerHTML += data.message; box.appendChild(msg); box.scrollTop = box.scrollHeight; }
 
-msgBox.addEventListener('keydown', e => {
-  if (e.key === 'Enter') sendMessage();
-  else socket.emit('typing', { from: window.userName, to });
-});
+function switchRoom(to) { currentChat = to; document.getElementById("chatBox").innerHTML = ""; socket.emit("load-history", { room: to }); }
 
-msgBox.addEventListener('keyup', () => {
-  setTimeout(() => {
-    socket.emit('stop typing', { from: window.userName, to });
-  }, 500);
-});
+function updateUserList(users) { const list = document.getElementById("userList"); list.innerHTML = ""; users.forEach(u => { const item = document.createElement("div"); item.className = "user"; item.innerHTML = <div class="avatar">${u.username.charAt(0)}</div><div>${u.username} ${u.active ? '🔴' : ''}</div>; item.onclick = () => switchRoom(u.username); list.appendChild(item); }); }
 
-socket.on('chat message', showMessage);
+function notifyTyping() { socket.emit("typing", { room: currentChat, username }); }
 
-socket.on('typing', from => {
-  if (from !== window.userName) {
-    msgBox.placeholder = `${from} is typing...`;
-  }
-});
+socket.on("chat-message", data => { appendMessage(data, data.username === username); if (data.username !== username) { playNotificationSound(); notifyMe(data.message, data.username); } });
 
-socket.on('stop typing', () => {
-  msgBox.placeholder = "Type your message...";
-});
+socket.on("history", messages => { messages.forEach(data => appendMessage(data, data.username === username)); });
 
-socket.on('chat history', list => {
-  messagesDiv.innerHTML = '';
-  list.forEach(showMessage);
-});
+socket.on("user-list", updateUserList);
 
-socket.on('user list', userList => {
-  const userBar = document.getElementById('userBar');
-  userBar.innerHTML = '';
-  modeSelect.innerHTML = `<option value="group">Group</option>`;
-  userList.forEach(u => {
-    if (u.name !== window.userName) {
-      const userEl = document.createElement('div');
-      userEl.className = 'user';
-      userEl.innerHTML = `<div>${u.name}</div>`;
-      if (u.active) {
-        userEl.innerHTML += `<div class="dot"></div>`;
-      }
-      userBar.appendChild(userEl);
+socket.on("typing", data => { const header = document.getElementById("chatHeader"); header.innerText = ${data.username} is typing...; clearTimeout(typingTimeout); typingTimeout = setTimeout(() => { header.innerText = currentChat === "group" ? "Group Chat" : currentChat; }, 1500); });
 
-      const opt = document.createElement('option');
-      opt.value = u.name;
-      opt.textContent = u.name;
-      modeSelect.appendChild(opt);
-    }
-  });
-});
+document.getElementById("chatForm").addEventListener("submit", sendMessage); document.getElementById("messageInput").addEventListener("input", notifyTyping);
 
-modeSelect.addEventListener('change', () => {
-  to = modeSelect.value;
-  socket.emit('load chat', { to });
-});
+initLogin();
 
-window.onload = () => {
-  socket.emit('load chat', { to });
-};
