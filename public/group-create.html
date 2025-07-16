@@ -1,1 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Create Group - Pakhiiiiiiiiiiiii 🐦</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f8fafc;
+      padding: 20px;
+    }
 
+    h2 {
+      text-align: center;
+      color: #1e40af;
+    }
+
+    form {
+      max-width: 400px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    .user-list {
+      margin-top: 15px;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 6px;
+    }
+
+    .user-list label {
+      font-weight: normal;
+      display: block;
+    }
+
+    button {
+      margin-top: 20px;
+      width: 100%;
+      background: #1e40af;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1c3faa;
+    }
+
+    .back-link {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .back-link a {
+      color: #1e40af;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>🔒 Create New Group</h2>
+  <form id="createGroupForm">
+    <label for="groupName">Group Name</label>
+    <input type="text" id="groupName" required />
+
+    <label for="groupPassword">Group Password</label>
+    <input type="password" id="groupPassword" required />
+
+    <label>Select Members</label>
+    <div class="user-list" id="userList">
+      <!-- All available users will be loaded here via JS -->
+    </div>
+
+    <button type="submit">Create Group</button>
+  </form>
+
+  <div class="back-link">
+    <a href="index.html">← Back to Home</a>
+  </div>
+
+  <script>
+    // Dummy user list — replace with socket response in real app
+    const users = JSON.parse(localStorage.getItem('allUsers')) || [];
+
+    const userListDiv = document.getElementById('userList');
+    users.forEach(user => {
+      const label = document.createElement('label');
+      label.innerHTML = `
+        <input type="checkbox" name="members" value="${user.name}" />
+        ${user.name}
+      `;
+      userListDiv.appendChild(label);
+    });
+
+    document.getElementById('createGroupForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const groupName = document.getElementById('groupName').value.trim();
+      const groupPassword = document.getElementById('groupPassword').value.trim();
+      const selected = [...document.querySelectorAll('input[name="members"]:checked')].map(el => el.value);
+
+      if (!groupName || !groupPassword || selected.length === 0) {
+        alert('Please fill all fields and select members.');
+        return;
+      }
+
+      // Save group to localStorage or send to server
+      const groups = JSON.parse(localStorage.getItem('groups') || '[]');
+      groups.push({ groupName, groupPassword, members: selected });
+      localStorage.setItem('groups', JSON.stringify(groups));
+
+      alert('Group created successfully!');
+      window.location.href = "index.html";
+    });
+  </script>
+
+</body>
+  </html>
